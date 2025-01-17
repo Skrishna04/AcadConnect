@@ -1,0 +1,99 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Interest Form</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="form-container">
+    <h2>Student Interests Based on Branches</h2>
+    <p>Please select your B.Tech branches of interest and then select the areas of interest!</p>
+
+    <form id="interestForm" action="/submit" method="POST">
+      
+      <!-- Branch Selection (Multiple) -->
+      <div class="form-group">
+        <label>Select Your Branches of Interest:</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="branches" value="CSE"> Computer Science & Engineering (CSE)</label>
+          <label><input type="checkbox" name="branches" value="ECE"> Electronics & Communication Engineering (ECE)</label>
+          <label><input type="checkbox" name="branches" value="EEE"> Electrical & Electronics Engineering (EEE)</label>
+          <label><input type="checkbox" name="branches" value="ME"> Mechanical Engineering (ME)</label>
+          <label><input type="checkbox" name="branches" value="CE"> Civil Engineering (CE)</label>
+          <label><input type="checkbox" name="branches" value="IT"> Information Technology (IT)</label>
+        </div>
+      </div>
+
+      <!-- Branch-Specific Interests -->
+      <div id="CSE-interests" class="interest-group" style="display: none;">
+        <label for="CSE-interests">Select Your Interests (CSE):</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="CSE-interests" value="Software Development"> Software Development</label>
+          <label><input type="checkbox" name="CSE-interests" value="Artificial Intelligence"> Artificial Intelligence</label>
+          <label><input type="checkbox" name="CSE-interests" value="Data Science"> Data Science</label>
+          <label><input type="checkbox" name="CSE-interests" value="Web Development"> Web Development</label>
+        </div>
+      </div>
+
+      <div id="ECE-interests" class="interest-group" style="display: none;">
+        <label for="ECE-interests">Select Your Interests (ECE):</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="ECE-interests" value="Embedded Systems"> Embedded Systems</label>
+          <label><input type="checkbox" name="ECE-interests" value="VLSI Design"> VLSI Design</label>
+          <label><input type="checkbox" name="ECE-interests" value="Communication Systems"> Communication Systems</label>
+          <label><input type="checkbox" name="ECE-interests" value="Signal Processing"> Signal Processing</label>
+        </div>
+      </div>
+
+      <div id="EEE-interests" class="interest-group" style="display: none;">
+        <label for="EEE-interests">Select Your Interests (EEE):</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="EEE-interests" value="Power Systems"> Power Systems</label>
+          <label><input type="checkbox" name="EEE-interests" value="Control Systems"> Control Systems</label>
+          <label><input type="checkbox" name="EEE-interests" value="Renewable Energy"> Renewable Energy</label>
+          <label><input type="checkbox" name="EEE-interests" value="Circuit Design"> Circuit Design</label>
+        </div>
+      </div>
+
+      <div id="ME-interests" class="interest-group" style="display: none;">
+        <label for="ME-interests">Select Your Interests (ME):</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="ME-interests" value="Thermodynamics"> Thermodynamics</label>
+          <label><input type="checkbox" name="ME-interests" value="CAD/CAM"> CAD/CAM</label>
+          <label><input type="checkbox" name="ME-interests" value="Manufacturing Engineering"> Manufacturing Engineering</label>
+          <label><input type="checkbox" name="ME-interests" value="Automobile Engineering"> Automobile Engineering</label>
+        </div>
+      </div>
+
+      <div id="CE-interests" class="interest-group" style="display: none;">
+        <label for="CE-interests">Select Your Interests (CE):</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="CE-interests" value="Structural Engineering"> Structural Engineering</label>
+          <label><input type="checkbox" name="CE-interests" value="Geotechnical Engineering"> Geotechnical Engineering</label>
+          <label><input type="checkbox" name="CE-interests" value="Transportation Engineering"> Transportation Engineering</label>
+          <label><input type="checkbox" name="CE-interests" value="Water Resources Engineering"> Water Resources Engineering</label>
+        </div>
+      </div>
+
+      <div id="IT-interests" class="interest-group" style="display: none;">
+        <label for="IT-interests">Select Your Interests (IT):</label>
+        <div class="checkbox-group">
+          <label><input type="checkbox" name="IT-interests" value="Software Engineering"> Software Engineering</label>
+          <label><input type="checkbox" name="IT-interests" value="Networking"> Networking</label>
+          <label><input type="checkbox" name="IT-interests" value="Database Management"> Database Management</label>
+          <label><input type="checkbox" name="IT-interests" value="Cyber Security"> Cyber Security</label>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit">Submit</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
