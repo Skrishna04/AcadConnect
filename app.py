@@ -1,85 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>B.Tech Student Details</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="form-container">
-    <h2>B.Tech Student Information</h2>
-    <form id="studentForm" action="/submit" method="POST" enctype="multipart/form-data">
-      <div class="form-group">
-        <label for="name">Full Name:</label>
-        <input type="text" id="name" name="name" placeholder="Enter your full name" required>
-      </div>
-
-      <div class="form-group">
-        <label for="rollNumber">Roll Number:</label>
-        <input type="text" id="rollNumber" name="rollNumber" placeholder="Enter your roll number" required>
-      </div>
-
-      <div class="form-group">
-        <label for="course">Course Name:</label>
-        <input type="text" id="course" name="course" placeholder="Enter your course name (e.g., B.Tech)" required>
-      </div>
-
-      <div class="form-group">
-        <label for="year">Current Year:</label>
-        <select id="year" name="year" required>
-          <option value="1">1st Year</option>
-          <option value="2">2nd Year</option>
-          <option value="3">3rd Year</option>
-          <option value="4">4th Year</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="branch">Branch of Study:</label>
-        <select id="branch" name="branch" required>
-          <option value="CSE">Computer Science & Engineering (CSE)</option>
-          <option value="ECE">Electronics & Communication Engineering (ECE)</option>
-          <option value="EEE">Electrical & Electronics Engineering (EEE)</option>
-          <option value="ME">Mechanical Engineering (ME)</option>
-          <option value="CE">Civil Engineering (CE)</option>
-          <option value="IT">Information Technology (IT)</option>
-          <!-- Add more branches if needed -->
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="dob">Date of Birth:</label>
-        <input type="date" id="dob" name="dob" required>
-      </div>
-
-      <!-- College ID Card Upload -->
-      <div class="form-group">
-        <label for="collegeId">Upload College ID Card:</label>
-        <input type="file" id="collegeId" name="collegeId" accept="image/*" required>
-        <small>Accepted formats: JPG, PNG, JPEG</small>
-      </div>
-
-      <div class="form-actions">
-        <button type="submit">Submit</button>
-      </div>
-    </form>
-  </div>
-
-  <script src="script.js"></script>
-</body>
-</html>
-
-
-
-
-
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, make_response
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import os
 import csv
+import datetime
 
 app = Flask(__name__)
 
@@ -94,6 +19,7 @@ db = SQLAlchemy(app)
 # Database model for storing user data
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
 
@@ -119,6 +45,7 @@ def login():
         # Successful login
         flash('Login successful!', 'success')
         session['user_id'] = user.id  # Store user id in session
+        session['email'] = user.email
         return redirect(url_for('dashboard'))
     else:
         # Invalid login
@@ -135,6 +62,7 @@ def signup():
 def create_account():
     email = request.form.get('email')
     password = request.form.get('password')
+    name = request.form.get('name')
 
     # Check if the email already exists
     if User.query.filter_by(email=email).first():
@@ -143,18 +71,23 @@ def create_account():
 
     # Hash the password before storing it
     hashed_password = generate_password_hash(password)
+    
 
     # Create a new user record in the database
-    new_user = User(email=email, password=hashed_password)
+    new_user = User(email=email, password=hashed_password, name=name)
     db.session.add(new_user)
     db.session.commit()
 
     flash('Account created successfully! Please log in.', 'success')
-    return redirect(url_for('index'))
+    resp = make_response(redirect(url_for('index')))
+    resp.set_cookie('email', email, expires=datetime.datetime.today() + datetime.timedelta(days=30))
+    return resp
 
 # Dashboard page after successful login
 @app.route('/dashboard')
 def dashboard():
+
+
     if 'user_id' not in session:
         flash('You must be logged in to view the dashboard.', 'danger')
         return redirect(url_for('index'))
@@ -187,13 +120,63 @@ def interest():
         # You can process the interests here or store them in a database
 
         # Returning the selected data (interest.html should display the results)
-        return render_template('result.html', branches=branches, interests=interests)
+        user = {"name": request.cookies.get('email')}
+        return render_template('home.html', user=user)
     
     return render_template('interest1.html')  # This will render the form to collect student interests
 
 # Handle student data upload (college ID and student info)
 @app.route('/submit', methods=['POST'])
 def submit():
+
+
+
+
+    if 'user_id' not in session:
+        flash('You must be logged in to submit data.', 'danger')
+        return redirect(url_for('index'))  # Redirect to login page if user is not logged in
+    
+    # Retrieve user_id from the session
+    user_id = session['user_id']
+    
+    # Get the data from the form
+    name = request.form['name']
+    roll_number = request.form['rollNumber']
+    course = request.form['course']
+    year = request.form['year']
+    branch = request.form['branch']
+    dob = request.form['dob']
+    college_id = request.files['collegeId']
+
+    # Process the uploaded college ID file (if any)
+    if college_id and allowed_file(college_id.filename):
+        filename = secure_filename(college_id.filename)
+        college_id_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        college_id.save(college_id_path)
+
+        # Save the data to a CSV (or a database if needed)
+        with open('student_data.csv', mode='a', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([user_id, name, roll_number, course, year, branch, dob, college_id_path])  # Save user_id along with other data
+
+        flash(f"Successfully submitted: {name}, {roll_number}, {course}, {year}, {branch}, {dob}", 'success')
+        return redirect(url_for('interest'))  # Redirect after successful submission
+    else:
+        flash("Invalid file format. Only JPG, JPEG, and PNG are allowed.", 'danger')
+        return redirect(url_for('dashboard'))  # Redirect to the dashboard in case of error
+
+
+
+
+
+
+
+
+
+
+
+
+
     name = request.form['name']
     roll_number = request.form['rollNumber']
     course = request.form['course']
@@ -230,83 +213,51 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# Route for the fourth page (home.html)
+@app.route('/home')
+def home():
+
+
+    # Check if the user is logged in
+    if 'user_id' not in session:
+        flash('You must be logged in to view the dashboard.', 'danger')
+        return redirect(url_for('index'))
+
+    # Retrieve the user's name from the session
+    user_id = session['user_id']
+    user = User.query.get(user_id)  # Get the user object from the database
+
+    if user:
+        user_name = user.email.split('@')[0]  # Extract username from email (or use another field if available)
+        session['user_name'] = user_name  # Store the username in the session
+    else:
+        flash('User not found. Please log in again.', 'danger')
+        return redirect(url_for('index'))
+
+    # Pass the user's name to the template
+    return render_template('home.html', user=user)
 
 
 
 
 
 
-from flask import Flask, render_template, jsonify, request
 
-app = Flask(__name__)
+    if 'user_id' not in session:
+        flash('You must be logged in to access this page.', 'danger')
+        return redirect(url_for('index'))
 
-# Sample Data for Users
-users = [
-    {"id": 1, "name": "Alice Smith", "bio": "Loves cooking and baking"},
-    {"id": 2, "name": "Bob Johnson", "bio": "Music lover and guitarist"},
-    {"id": 3, "name": "Eva Green", "bio": "Travel enthusiast"},
-    {"id": 4, "name": "Charlie Brown", "bio": "Tech enthusiast"},
-    {"id": 5, "name": "Diana Ross", "bio": "Fitness enthusiast"},
-    {"id": 6, "name": "Steve Rogers", "bio": "Adventure seeker"},
-]
+    # Retrieve the logged-in user's details
+    user_id = session['user_id']
+    user = User.query.get(user_id)
 
-# Sample Friend Requests
-default_requests = [
-    {"id": 7, "name": "Michael Scott", "bio": "World's best boss"},
-    {"id": 8, "name": "Pam Beesly", "bio": "Creative and kind"},
-]
+    if user:
+        user_name = user.email.split('@')[0].capitalize()  # Extract name from email for simplicity
+    else:
+        flash('User not found. Please log in again.', 'danger')
+        return redirect(url_for('index'))
 
-# Store friend requests separately to allow changes
-friend_requests = default_requests.copy()
-
-
-@app.route('/')
-def index():
-    """Serve the main HTML page."""
-    return render_template('index.html')
-
-
-@app.route('/api/friend_suggestions', methods=['GET'])
-def friend_suggestions():
-    """Return a list of friend suggestions."""
-    return jsonify(users)
-
-
-@app.route('/api/friend_requests', methods=['GET'])
-def get_friend_requests():
-    """Return a list of friend requests."""
-    return jsonify(friend_requests)
-
-
-@app.route('/api/accept_request', methods=['POST'])
-def accept_request():
-    """Handle accepting a friend request."""
-    user_id = request.json.get('id')
-    global friend_requests
-    friend_requests = [req for req in friend_requests if req['id'] != user_id]
-    return jsonify({"message": "Friend request accepted!"})
-
-
-@app.route('/api/decline_request', methods=['POST'])
-def decline_request():
-    """Handle declining a friend request."""
-    user_id = request.json.get('id')
-    global friend_requests
-    friend_requests = [req for req in friend_requests if req['id'] != user_id]
-    return jsonify({"message": "Friend request declined."})
-
-
-@app.route('/api/search', methods=['GET'])
-def search():
-    """Search for users by name."""
-    query = request.args.get('q', '').lower()
-    if not query:
-        return jsonify([])
-    results = [user for user in users if query in user['name'].lower()]
-    return jsonify(results)
-
+    return render_template('home.html', user={'name': user_name})
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -1,0 +1,768 @@
+from flask import Flask, render_template, request, redirect, url_for, flash, session, make_response
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+import os
+import csv
+import datetime
+
+app = Flask(__name__)
+
+# Secret key for session management and flash messages
+app.secret_key = 'your_secret_key'
+
+# Database setup
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.db'  # SQLite for simplicity
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# Database model for storing user data
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+
+# Create the database (only run once)
+with app.app_context():
+    db.create_all()
+
+# Home route for login page
+@app.route('/')
+def index():
+    return render_template('index.html')  # This will render the login form
+
+# Handle login submission
+@app.route('/login', methods=['POST'])
+def login():
+    email = request.form.get('email')
+    password = request.form.get('password')
+
+    # Check if user exists
+    user = User.query.filter_by(email=email).first()
+
+    if user and check_password_hash(user.password, password):
+        # Successful login
+        flash('Login successful!', 'success')
+        session['user_id'] = user.id  # Store user id in session
+        session['email'] = user.email
+        return redirect(url_for('dashboard'))
+    else:
+        # Invalid login
+        flash('Invalid email or password. Please try again.', 'danger')
+        return redirect(url_for('index'))
+
+# Signup page (optional in the provided HTML)
+@app.route('/signup')
+def signup():
+    return render_template('signup.html')  # A page for user signup
+
+# Handle account creation (signup form)
+@app.route('/create_account', methods=['POST'])
+def create_account():
+    email = request.form.get('email')
+    password = request.form.get('password')
+    name = request.form.get('name')
+
+    # Check if the email already exists
+    if User.query.filter_by(email=email).first():
+        flash('Email already registered. Please log in.', 'warning')
+        return redirect(url_for('index'))
+
+    # Hash the password before storing it
+    hashed_password = generate_password_hash(password)
+    
+
+    # Create a new user record in the database
+    new_user = User(email=email, password=hashed_password, name=name)
+    db.session.add(new_user)
+    db.session.commit()
+
+    flash('Account created successfully! Please log in.', 'success')
+    resp = make_response(redirect(url_for('index')))
+    resp.set_cookie('email', email, expires=datetime.datetime.today() + datetime.timedelta(days=30))
+    return resp
+
+# Dashboard page after successful login
+@app.route('/dashboard')
+def dashboard():
+
+
+    if 'user_id' not in session:
+        flash('You must be logged in to view the dashboard.', 'danger')
+        return redirect(url_for('index'))
+    return render_template('dashboard.html')  # Placeholder dashboard page
+
+# Handle student interests form submission
+@app.route('/interest1', methods=['GET', 'POST'])
+def interest():
+    if request.method == 'POST':
+        # Get selected branches from the form
+        branches = request.form.getlist('branches')
+        
+        # Initialize a dictionary to store branch-specific interests
+        interests = {}
+        
+        # Collect selected interests based on the selected branches
+        if 'CSE' in branches:
+            interests['CSE'] = request.form.getlist('CSE-interests')
+        if 'ECE' in branches:
+            interests['ECE'] = request.form.getlist('ECE-interests')
+        if 'EEE' in branches:
+            interests['EEE'] = request.form.getlist('EEE-interests')
+        if 'ME' in branches:
+            interests['ME'] = request.form.getlist('ME-interests')
+        if 'CE' in branches:
+            interests['CE'] = request.form.getlist('CE-interests')
+        if 'IT' in branches:
+            interests['IT'] = request.form.getlist('IT-interests')
+
+        # You can process the interests here or store them in a database
+
+        # Returning the selected data (interest.html should display the results)
+        user = {"name": request.cookies.get('email')}
+        return render_template('home.html', user=user)
+    
+    return render_template('interest1.html')  # This will render the form to collect student interests
+
+# Handle student data upload (college ID and student info)
+@app.route('/submit', methods=['POST'])
+def submit():
+
+
+
+
+    if 'user_id' not in session:
+        flash('You must be logged in to submit data.', 'danger')
+        return redirect(url_for('index'))  # Redirect to login page if user is not logged in
+    
+    # Retrieve user_id from the session
+    user_id = session['user_id']
+    
+    # Get the data from the form
+    name = request.form['name']
+    roll_number = request.form['rollNumber']
+    course = request.form['course']
+    year = request.form['year']
+    branch = request.form['branch']
+    dob = request.form['dob']
+    college_id = request.files['collegeId']
+
+    # Process the uploaded college ID file (if any)
+    if college_id and allowed_file(college_id.filename):
+        filename = secure_filename(college_id.filename)
+        college_id_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        college_id.save(college_id_path)
+
+        # Save the data to a CSV (or a database if needed)
+        with open('student_data.csv', mode='a', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([user_id, name, roll_number, course, year, branch, dob, college_id_path])  # Save user_id along with other data
+
+        flash(f"Successfully submitted: {name}, {roll_number}, {course}, {year}, {branch}, {dob}", 'success')
+        return redirect(url_for('interest'))  # Redirect after successful submission
+    else:
+        flash("Invalid file format. Only JPG, JPEG, and PNG are allowed.", 'danger')
+        return redirect(url_for('dashboard'))  # Redirect to the dashboard in case of error
+
+
+
+
+
+
+
+
+
+
+
+
+
+    name = request.form['name']
+    roll_number = request.form['rollNumber']
+    course = request.form['course']
+    year = request.form['year']
+    branch = request.form['branch']
+    dob = request.form['dob']
+    college_id = request.files['collegeId']
+
+    if college_id and allowed_file(college_id.filename):
+        filename = secure_filename(college_id.filename)
+        college_id_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        college_id.save(college_id_path)
+
+        # Save the data to CSV (or a database if needed)
+        with open('student_data.csv', mode='a', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([name, roll_number, course, year, branch, dob, college_id_path])
+
+        flash(f"Successfully submitted: {name}, {roll_number}, {course}, {year}, {branch}, {dob}", 'success')
+        return redirect(url_for('interest'))
+    else:
+        flash("Invalid file format. Only JPG, JPEG, and PNG are allowed.", 'danger')
+        return redirect(url_for('dashboard'))  # Redirect to the interest page in case of error
+
+# Helper function to check allowed file types (for uploading college ID)
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'jpg', 'jpeg', 'png'}
+
+# Upload folder configuration for student file upload
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Ensure the upload folder exists
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
+
+# Route for the fourth page (home.html)
+@app.route('/home')
+def home():
+
+
+    # Check if the user is logged in
+    if 'user_id' not in session:
+        flash('You must be logged in to view the dashboard.', 'danger')
+        return redirect(url_for('index'))
+
+    # Retrieve the user's name from the session
+    user_id = session['user_id']
+    user = User.query.get(user_id)  # Get the user object from the database
+
+    if user:
+        user_name = user.email.split('@')[0]  # Extract username from email (or use another field if available)
+        session['user_name'] = user_name  # Store the username in the session
+    else:
+        flash('User not found. Please log in again.', 'danger')
+        return redirect(url_for('index'))
+
+    # Pass the user's name to the template
+    return render_template('home.html', user=user)
+
+
+
+
+
+
+
+    if 'user_id' not in session:
+        flash('You must be logged in to access this page.', 'danger')
+        return redirect(url_for('index'))
+
+    # Retrieve the logged-in user's details
+    user_id = session['user_id']
+    user = User.query.get(user_id)
+
+    if user:
+        user_name = user.email.split('@')[0].capitalize()  # Extract name from email for simplicity
+    else:
+        flash('User not found. Please log in again.', 'danger')
+        return redirect(url_for('index'))
+
+    return render_template('home.html', user={'name': user_name})
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    class Config:
+    MYSQL_HOST = os.getenv('MYSQL_HOST', 'localhost')
+    MYSQL_USER = os.getenv('MYSQL_USER', 'your_mysql_username')
+    MYSQL_PASSWORD = os.getenv('MYSQL_PASSWORD', 'your_mysql_password')
+    MYSQL_DB = os.getenv('MYSQL_DB', 'profileDB')
+
+
+
+
+
+    
+
+
+app = Flask(__name__)
+app.config.from_object(Config)
+
+# Initialize MySQL
+mysql = MySQL(app)
+
+# Enable CORS for all routes
+CORS(app)
+
+# Route to create a new profile
+@app.route('/api/profile', methods=['POST'])
+def create_profile():
+    data = request.get_json()
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        """
+        INSERT INTO profiles (initials, name, college, course, bio, interests, email, location, social_links)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (data['initials'], data['name'], data['college'], data['course'], data['bio'], ','.join(data['interests']), data['email'], data['location'], ','.join(data['socialLinks']))
+    )
+    mysql.connection.commit()
+    cursor.close()
+    return jsonify({'message': 'Profile created'}), 201
+
+# Route to get a profile by ID
+@app.route('/api/profile/<profile_id>', methods=['GET'])
+def get_profile(profile_id):
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        """
+        SELECT * FROM profiles WHERE id = %s
+        """, (profile_id,)
+    )
+    profile = cursor.fetchone()
+    if profile:
+        result = {
+            'id': profile[0],
+            'initials': profile[1],
+            'name': profile[2],
+            'college': profile[3],
+            'course': profile[4],
+            'bio': profile[5],
+            'interests': profile[6].split(','),
+            'email': profile[7],
+            'location': profile[8],
+            'social_links': profile[9].split(',')
+        }
+        return jsonify(result)
+    else:
+        return jsonify({'message': 'Profile not found'}), 404
+
+# Route to update a profile by ID
+@app.route('/api/profile/<profile_id>', methods=['PUT'])
+def update_profile(profile_id):
+    data = request.get_json()
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        """
+        UPDATE profiles SET initials = %s, name = %s, college = %s, course = %s, bio = %s, interests = %s, email = %s, location = %s, social_links = %s WHERE id = %s
+        """, (data['initials'], data['name'], data['college'], data['course'], data['bio'], ','.join(data['interests']), data['email'], data['location'], ','.join(data['socialLinks']), profile_id)
+    )
+    mysql.connection.commit()
+    cursor.close()
+    return jsonify({'message': 'Profile updated'}), 200
+
+# Route to delete a profile by ID
+@app.route('/api/profile/<profile_id>', methods=['DELETE'])
+def delete_profile(profile_id):
+    cursor = mysql.connection.cursor()
+    cursor.execute(
+        """
+        DELETE FROM profiles WHERE id = %s
+        """, (profile_id,)
+    )
+    mysql.connection.commit()
+    cursor.close()
+    return jsonify({'message': 'Profile deleted'}), 200
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    from flask import Flask, render_template, request, redirect, url_for, flash, session, make_response
+from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+import os
+import csv
+import datetime
+
+app = Flask(_name_)
+
+# Secret key for session management and flash messages
+app.secret_key = 'your_secret_key'
+
+# Database setup
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.db'  # SQLite for simplicity
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# Database model for storing user data
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(200), nullable=False)
+
+# Create the database (only run once)
+with app.app_context():
+    db.create_all()
+
+# Home route for login page
+@app.route('/')
+def index():
+    return render_template('index.html')  # This will render the login form
+
+# Handle login submission
+@app.route('/login', methods=['POST'])
+def login():
+    email = request.form.get('email')
+    password = request.form.get('password')
+
+    # Check if user exists
+    user = User.query.filter_by(email=email).first()
+
+    if user and check_password_hash(user.password, password):
+        # Successful login
+        flash('Login successful!', 'success')
+        session['user_id'] = user.id  # Store user id in session
+        session['email'] = user.email
+        return redirect(url_for('dashboard'))
+    else:
+        # Invalid login
+        flash('Invalid email or password. Please try again.', 'danger')
+        return redirect(url_for('index'))
+
+# Signup page (optional in the provided HTML)
+@app.route('/signup')
+def signup():
+    return render_template('signup.html')  # A page for user signup
+
+# Handle account creation (signup form)
+@app.route('/create_account', methods=['POST'])
+def create_account():
+    email = request.form.get('email')
+    password = request.form.get('password')
+    name = request.form.get('name')
+
+    # Check if the email already exists
+    if User.query.filter_by(email=email).first():
+        flash('Email already registered. Please log in.', 'warning')
+        return redirect(url_for('index'))
+
+    # Hash the password before storing it
+    hashed_password = generate_password_hash(password)
+    
+
+    # Create a new user record in the database
+    new_user = User(email=email, password=hashed_password, name=name)
+    db.session.add(new_user)
+    db.session.commit()
+
+    flash('Account created successfully! Please log in.', 'success')
+    resp = make_response(redirect(url_for('index')))
+    resp.set_cookie('email', email, expires=datetime.datetime.today() + datetime.timedelta(days=30))
+    return resp
+
+# Dashboard page after successful login
+@app.route('/dashboard')
+def dashboard():
+
+
+    if 'user_id' not in session:
+        flash('You must be logged in to view the dashboard.', 'danger')
+        return redirect(url_for('index'))
+    return render_template('dashboard.html')  # Placeholder dashboard page
+
+# Handle student interests form submission
+@app.route('/interest1', methods=['GET', 'POST'])
+def interest():
+    if request.method == 'POST':
+        # Get selected branches from the form
+        branches = request.form.getlist('branches')
+        
+        # Initialize a dictionary to store branch-specific interests
+        interests = {}
+        
+        # Collect selected interests based on the selected branches
+        if 'CSE' in branches:
+            interests['CSE'] = request.form.getlist('CSE-interests')
+        if 'ECE' in branches:
+            interests['ECE'] = request.form.getlist('ECE-interests')
+        if 'EEE' in branches:
+            interests['EEE'] = request.form.getlist('EEE-interests')
+        if 'ME' in branches:
+            interests['ME'] = request.form.getlist('ME-interests')
+        if 'CE' in branches:
+            interests['CE'] = request.form.getlist('CE-interests')
+        if 'IT' in branches:
+            interests['IT'] = request.form.getlist('IT-interests')
+
+        # You can process the interests here or store them in a database
+
+        # Returning the selected data (interest.html should display the results)
+        user = {"name": request.cookies.get('email')}
+        return render_template('home.html', user=user)
+    
+    return render_template('interest1.html')  # This will render the form to collect student interests
+
+# Handle student data upload (college ID and student info)
+@app.route('/submit', methods=['POST'])
+def submit():
+
+
+
+
+    if 'user_id' not in session:
+        flash('You must be logged in to submit data.', 'danger')
+        return redirect(url_for('index'))  # Redirect to login page if user is not logged in
+    
+    # Retrieve user_id from the session
+    user_id = session['user_id']
+    
+    # Get the data from the form
+    name = request.form['name']
+    roll_number = request.form['rollNumber']
+    course = request.form['course']
+    year = request.form['year']
+    branch = request.form['branch']
+    dob = request.form['dob']
+    college_id = request.files['collegeId']
+
+    # Process the uploaded college ID file (if any)
+    if college_id and allowed_file(college_id.filename):
+        filename = secure_filename(college_id.filename)
+        college_id_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        college_id.save(college_id_path)
+
+        # Save the data to a CSV (or a database if needed)
+        with open('student_data.csv', mode='a', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([user_id, name, roll_number, course, year, branch, dob, college_id_path])  # Save user_id along with other data
+
+        flash(f"Successfully submitted: {name}, {roll_number}, {course}, {year}, {branch}, {dob}", 'success')
+        return redirect(url_for('interest'))  # Redirect after successful submission
+    else:
+        flash("Invalid file format. Only JPG, JPEG, and PNG are allowed.", 'danger')
+        return redirect(url_for('dashboard'))  # Redirect to the dashboard in case of error
+    name = request.form['name']
+    roll_number = request.form['rollNumber']
+    course = request.form['course']
+    year = request.form['year']
+    branch = request.form['branch']
+    dob = request.form['dob']
+    college_id = request.files['collegeId']
+
+    if college_id and allowed_file(college_id.filename):
+        filename = secure_filename(college_id.filename)
+        college_id_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        college_id.save(college_id_path)
+
+        # Save the data to CSV (or a database if needed)
+        with open('student_data.csv', mode='a', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([name, roll_number, course, year, branch, dob, college_id_path])
+
+        flash(f"Successfully submitted: {name}, {roll_number}, {course}, {year}, {branch}, {dob}", 'success')
+        return redirect(url_for('interest'))
+    else:
+        flash("Invalid file format. Only JPG, JPEG, and PNG are allowed.", 'danger')
+        return redirect(url_for('dashboard'))  # Redirect to the interest page in case of error
+
+# Helper function to check allowed file types (for uploading college ID)
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'jpg', 'jpeg', 'png'}
+
+# Upload folder configuration for student file upload
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Ensure the upload folder exists
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
+
+# FIXME: Fix this
+@app.route('/profile')
+def profile():
+    email = request.cookies.get('email')
+    user = User.query.filter_by(email=email).first()
+    name = user.name
+    print(user.name)
+    
+    # Read student data from the CSV file
+    student_data = []
+    with open('student_data.csv', mode='r') as csvfile:
+        reader = csv.reader(csvfile)
+        student_data = [row for row in reader]
+    
+    if not student_data:
+        flash('No data found.', 'warning')
+        return redirect(url_for('dashboard'))
+    
+    userdat = {}
+    for i in student_data:
+        # print(i)
+        if name == i[1]:
+            userdat['name'] = i[1]
+            userdat['roll_number'] = i[2]
+            userdat['dept'] = i[3]
+            userdat['year'] = i[4]
+            userdat['branch'] = i[5]
+            userdat['dob'] = i[6]
+
+    # if not userdat:
+    #     flash('No data found.', 'warning')
+    #     return redirect(url_for('dashboard'))
+
+    
+
+
+    return render_template('profile.html', user=userdat)
+
+# Route for the fourth page (home.html)
+@app.route('/home')
+def home():
+
+
+    # Check if the user is logged in
+    if 'user_id' not in session:
+        flash('You must be logged in to view the dashboard.', 'danger')
+        return redirect(url_for('index'))
+
+    # Retrieve the user's name from the session
+    user_id = session['user_id']
+    user = User.query.get(user_id)  # Get the user object from the database
+
+    if user:
+        user_name = user.email.split('@')[0]  # Extract username from email (or use another field if available)
+        session['user_name'] = user_name  # Store the username in the session
+    else:
+        flash('User not found. Please log in again.', 'danger')
+        return redirect(url_for('index'))
+
+    # Pass the user's name to the template
+    return render_template('home.html', user=user)
+
+    if 'user_id' not in session:
+        flash('You must be logged in to access this page.', 'danger')
+        return redirect(url_for('index'))
+
+    # Retrieve the logged-in user's details
+    user_id = session['user_id']
+    user = User.query.get(user_id)
+
+    if user:
+        user_name = user.email.split('@')[0].capitalize()  # Extract name from email for simplicity
+    else:
+        flash('User not found. Please log in again.', 'danger')
+        return redirect(url_for('index'))
+
+    return render_template('home.html', user={'name': user_name})
+
+if _name_ == '_main_':
+    app.run(debug=True)
