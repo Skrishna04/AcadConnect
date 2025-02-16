@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, make_response
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -86,8 +86,6 @@ def create_account():
 # Dashboard page after successful login
 @app.route('/dashboard')
 def dashboard():
-
-
     if 'user_id' not in session:
         flash('You must be logged in to view the dashboard.', 'danger')
         return redirect(url_for('index'))
@@ -121,17 +119,13 @@ def interest():
 
         # Returning the selected data (interest.html should display the results)
         user = {"name": request.cookies.get('email')}
-        return render_template('home.html', user=user)
+        return redirect(url_for('home'))
     
     return render_template('interest1.html')  # This will render the form to collect student interests
 
 # Handle student data upload (college ID and student info)
 @app.route('/submit', methods=['POST'])
 def submit():
-
-
-
-
     if 'user_id' not in session:
         flash('You must be logged in to submit data.', 'danger')
         return redirect(url_for('index'))  # Redirect to login page if user is not logged in
@@ -165,42 +159,6 @@ def submit():
         flash("Invalid file format. Only JPG, JPEG, and PNG are allowed.", 'danger')
         return redirect(url_for('dashboard'))  # Redirect to the dashboard in case of error
 
-
-
-
-
-
-
-
-
-
-
-
-
-    name = request.form['name']
-    roll_number = request.form['rollNumber']
-    course = request.form['course']
-    year = request.form['year']
-    branch = request.form['branch']
-    dob = request.form['dob']
-    college_id = request.files['collegeId']
-
-    if college_id and allowed_file(college_id.filename):
-        filename = secure_filename(college_id.filename)
-        college_id_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        college_id.save(college_id_path)
-
-        # Save the data to CSV (or a database if needed)
-        with open('student_data.csv', mode='a', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            writer.writerow([name, roll_number, course, year, branch, dob, college_id_path])
-
-        flash(f"Successfully submitted: {name}, {roll_number}, {course}, {year}, {branch}, {dob}", 'success')
-        return redirect(url_for('interest'))
-    else:
-        flash("Invalid file format. Only JPG, JPEG, and PNG are allowed.", 'danger')
-        return redirect(url_for('dashboard'))  # Redirect to the interest page in case of error
-
 # Helper function to check allowed file types (for uploading college ID)
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'jpg', 'jpeg', 'png'}
@@ -213,11 +171,9 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
-# Route for the fourth page (home.html)
+# Route for the home page
 @app.route('/home')
 def home():
-
-
     # Check if the user is logged in
     if 'user_id' not in session:
         flash('You must be logged in to view the dashboard.', 'danger')
@@ -237,27 +193,76 @@ def home():
     # Pass the user's name to the template
     return render_template('home.html', user=user)
 
-
-
-
-
-
-
+# Route for the profile page
+@app.route('/profile')
+def profile():
+    # Check if the user is logged in
     if 'user_id' not in session:
-        flash('You must be logged in to access this page.', 'danger')
+        flash('You must be logged in to view your profile.', 'danger')
         return redirect(url_for('index'))
 
-    # Retrieve the logged-in user's details
+    # Retrieve the user's name from the session
     user_id = session['user_id']
-    user = User.query.get(user_id)
+    user = User.query.get(user_id)  # Get the user object from the database
 
-    if user:
-        user_name = user.email.split('@')[0].capitalize()  # Extract name from email for simplicity
-    else:
-        flash('User not found. Please log in again.', 'danger')
-        return redirect(url_for('index'))
+    # Initialize a dictionary to store the user's profile details
+    profile_details = {
+        'name': user.name,
+        'email': user.email,
+        'roll_number': '',
+        'course': '',
+        'year': '',
+        'branch': '',
+        'dob': ''
+    }
 
-    return render_template('home.html', user={'name': user_name})
+    # Read user details from the CSV file
+    with open('student_data.csv', mode='r') as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader:
+            if int(row[0]) == user_id:
+                profile_details['roll_number'] = row[2]
+                profile_details['course'] = row[3]
+                profile_details['year'] = row[4]
+                profile_details['branch'] = row[5]
+                profile_details['dob'] = row[6]
+                break
+
+    return render_template('profile.html', user=profile_details)
+
+# Route for searching users
+@app.route('/search')
+def search():
+    query = request.args.get('q')
+    if not query:
+        return jsonify([])
+
+    users = User.query.filter(User.name.contains(query)).all()
+    results = [{'name': user.name, 'email': user.email} for user in users]
+
+    return jsonify(results)
+
+# Route for getting friend requests
+@app.route('/requests')
+def get_requests():
+    # Fetch friend requests from the database or any data source
+    requests = [
+        {"name": "John Doe"},
+        {"name": "Jane Smith"},
+        {"name": "Alice Johnson"}
+    ]
+    return jsonify(requests)
+
+# Route for getting friend suggestions
+@app.route('/suggestions')
+def get_suggestions():
+    # Fetch friend suggestions from the database or any data source
+    suggestions = [
+        {"name": "Bob Brown"},
+        {"name": "Charlie Davis"},
+        {"name": "Eve White"}
+    ]
+    return jsonify(suggestions)
 
 if __name__ == '__main__':
     app.run(debug=True)

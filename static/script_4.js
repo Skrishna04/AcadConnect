@@ -124,3 +124,71 @@ document.addEventListener('DOMContentLoaded', () => {
   fetchFriendRequests();
   fetchFriendSuggestions();
 });
+
+
+
+
+
+
+
+document.addEventListener('DOMContentLoaded', function() {
+  const profileInitial = document.getElementById('profile-first-letter');
+  if (profileInitial) {
+      const initial = profileInitial.textContent.trim().charAt(0).toUpperCase();
+      profileInitial.textContent = initial;
+  }
+});
+
+function searchFriends() {
+  const query = document.getElementById('search-bar').value;
+  if (query.length > 2) {
+      fetch(`/search?q=${query}`)
+          .then(response => response.json())
+          .then(data => displaySearchResults(data))
+          .catch(error => console.error('Error:', error));
+  }
+}
+
+function displaySearchResults(results) {
+  // Display the results in your desired location
+}
+
+function performSearch() {
+  searchFriends();
+}
+
+function showRequests() {
+  fetch('/requests')
+      .then(response => response.json())
+      .then(data => displayRequests(data))
+      .catch(error => console.error('Error:', error));
+}
+
+function showSuggestions() {
+  fetch('/suggestions')
+      .then(response => response.json())
+      .then(data => displaySuggestions(data))
+      .catch(error => console.error('Error:', error));
+}
+
+function displayRequests(requests) {
+  const requestList = document.getElementById('request-list');
+  requestList.innerHTML = ''; // Clear previous requests
+  requests.forEach(request => {
+      const listItem = document.createElement('div');
+      listItem.className = 'request-item';
+      listItem.textContent = request.name;
+      requestList.appendChild(listItem);
+  });
+}
+
+function displaySuggestions(suggestions) {
+  const suggestionList = document.getElementById('suggestion-list');
+  suggestionList.innerHTML = ''; // Clear previous suggestions
+  suggestions.forEach(suggestion => {
+      const listItem = document.createElement('div');
+      listItem.className = 'suggestion-item';
+      listItem.textContent = suggestion.name;
+      suggestionList.appendChild(listItem);
+  });
+}
