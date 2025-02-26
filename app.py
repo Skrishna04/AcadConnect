@@ -264,5 +264,12 @@ def get_suggestions():
     ]
     return jsonify(suggestions)
 
+@app.route('/messages')
+def messages():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    user = User.query.get(session['user_id'])
+    return render_template('messages.html', user=user)
+
 if __name__ == '__main__':
     app.run(debug=True)
