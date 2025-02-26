@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>B.Tech Student Details</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="form-container">
+    <h2>B.Tech Student Information</h2>
+    <form id="studentForm" action="/submit" method="POST" enctype="multipart/form-data">
+      <div class="form-group">
+        <label for="name">Full Name:</label>
+        <input type="text" id="name" name="name" placeholder="Enter your full name" required>
+      </div>
+
+      <div class="form-group">
+        <label for="rollNumber">Roll Number:</label>
+        <input type="text" id="rollNumber" name="rollNumber" placeholder="Enter your roll number" required>
+      </div>
+
+      <div class="form-group">
+        <label for="course">Course Name:</label>
+        <input type="text" id="course" name="course" placeholder="Enter your course name (e.g., B.Tech)" required>
+      </div>
+
+      <div class="form-group">
+        <label for="year">Current Year:</label>
+        <select id="year" name="year" required>
+          <option value="1">1st Year</option>
+          <option value="2">2nd Year</option>
+          <option value="3">3rd Year</option>
+          <option value="4">4th Year</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="branch">Branch of Study:</label>
+        <select id="branch" name="branch" required>
+          <option value="CSE">Computer Science & Engineering (CSE)</option>
+          <option value="ECE">Electronics & Communication Engineering (ECE)</option>
+          <option value="EEE">Electrical & Electronics Engineering (EEE)</option>
+          <option value="ME">Mechanical Engineering (ME)</option>
+          <option value="CE">Civil Engineering (CE)</option>
+          <option value="IT">Information Technology (IT)</option>
+          <!-- Add more branches if needed -->
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="dob">Date of Birth:</label>
+        <input type="date" id="dob" name="dob" required>
+      </div>
+
+      <!-- College ID Card Upload -->
+      <div class="form-group">
+        <label for="collegeId">Upload College ID Card:</label>
+        <input type="file" id="collegeId" name="collegeId" accept="image/*" required>
+        <small>Accepted formats: JPG, PNG, JPEG</small>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit">Submit</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
+

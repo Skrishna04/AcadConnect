@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selected Interests</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+  <div class="form-container">
+    <h2>Your Selected Branches and Interests</h2>
+    <ul>
+      <li><strong>Branches of Interest:</strong></li>
+      {% for branch in branches %}
+        <li>{{ branch }}</li>
+      {% endfor %}
+    </ul>
+
+    <h3>Interests for Each Branch:</h3>
+    {% for branch, interest_list in interests.items() %}
+      <h4>{{ branch }}:</h4>
+      <ul>
+        {% for interest in interest_list %}
+          <li>{{ interest }}</li>
+        {% endfor %}
+      </ul>
+    {% endfor %}
+  </div>
+</body>
+</html>

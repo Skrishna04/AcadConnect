@@ -27,8 +27,12 @@ class User(db.Model):
 with app.app_context():
     db.create_all()
 
-# Home route for login page
 @app.route('/')
+def start():
+    return render_template('start.html') 
+
+# Home route for login page
+@app.route('/index')
 def index():
     return render_template('index.html')  # This will render the login form
 

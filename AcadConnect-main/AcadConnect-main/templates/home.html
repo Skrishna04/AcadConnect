@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Friend Suggestions and Requests</title>
+  <link rel="stylesheet" href="/static/styles_4.css">
+  <script src="/static/script_4.js"></script>
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <h1 class="logo">MySocial</h1>
+    <div class="nav-search">
+      <input type="text" id="search-bar" placeholder="Search for people..." onkeyup="searchFriends()">
+      <button onclick="performSearch()">🔍</button>
+    </div>
+    <ul class="nav-links">
+      <li><a href="{{ url_for('home') }}">Home</a></li>
+      <li><a href="{{ url_for('profile') }}">Profile</a></li>
+      <li><a href="#friend-requests">Requests</a></li>
+      <li><a href="#suggestions">Suggestions</a></li>
+      <li class="notification-link">
+        <a href="#" id="notification-link">
+          <span class="bell-icon">🔔</span>
+          <span id="notification-count">3</span>
+        </a>
+      </li>
+      <li><a href="#messages" class="messages-link">Messages</a></li>
+    </ul>
+  </nav>
+    
+  <!-- Profile Bar -->
+  <div class="profile-bar">
+    <div class="profile-avatar">
+      <span id="profile-first-letter">{{ user.name[0] }}</span>
+    </div>
+    <div class="profile-info">
+      <h2 id="profile-name">{{ user.name }}</h2>
+      <p>Let’s make new connections today!</p>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="container">
+    <div class="main-sections">
+      <!-- Friend Requests Section -->
+      <section id="friend-requests" class="friend-requests">
+        <h2>Friend Requests</h2>
+        <div class="request-list" id="request-list">
+          <!-- Friend requests will be displayed here -->
+        </div>
+      </section>
+
+      <!-- Friend Suggestions Section -->
+      <section id="suggestions" class="suggestions">
+        <h2>People You May Know</h2>
+        <div class="suggestion-list" id="suggestion-list">
+          <!-- Suggested friends will be displayed here -->
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>&copy; 2025 MySocial. All Rights Reserved.</p>
+  </footer>
+
+</body>
+</html>
