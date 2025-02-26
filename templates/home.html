@@ -18,15 +18,15 @@
     <ul class="nav-links">
       <li><a href="{{ url_for('home') }}">Home</a></li>
       <li><a href="{{ url_for('profile') }}">Profile</a></li>
-      <li><a href="#friend-requests">Requests</a></li>
-      <li><a href="#suggestions">Suggestions</a></li>
+      <li><a href="#friend-requests" onclick="showRequests()">Requests</a></li>
+      <li><a href="#suggestions" onclick="showSuggestions()">Suggestions</a></li>
       <li class="notification-link">
         <a href="#" id="notification-link">
           <span class="bell-icon">🔔</span>
           <span id="notification-count">3</span>
         </a>
       </li>
-      <li><a href="#messages" class="messages-link">Messages</a></li>
+      <li><a href="{{ url_for('messages') }}" class="messages-link">Messages</a></li>
     </ul>
   </nav>
     

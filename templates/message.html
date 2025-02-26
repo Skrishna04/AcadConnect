@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messaging Interface</title>
+    <link rel="stylesheet" href="/static/styles_m6.css">
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="search-bar">
+                <input type="text" placeholder="Search messages...">
+            </div>
+            <div class="contact-list">
+                <div class="contact active">
+                    <img src="avatar1.jpg" alt="Avatar">
+                    <div class="contact-info">
+                        <h4>Skaria Mathew</h4>
+                        <p>Last message...</p>
+                    </div>
+                </div>
+                <div class="contact">
+                    <img src="avatar2.jpg" alt="Avatar">
+                    <div class="contact-info">
+                        <h4>Shan Krishna</h4>
+                        <p>Last message...</p>
+                    </div>
+                </div>
+                <!-- Add more contacts as needed -->
+            </div>
+        </div>
+        <div class="chat-area">
+            <div class="chat-header">
+                <img src="avatar1.jpg" alt="Avatar">
+                <h4>Skaria Mathew</h4>
+            </div>
+            <div class="chat-messages">
+                <div class="message received">
+                    <p>Hello! How are you?</p>
+                    <span class="timestamp">10:00 AM</span>
+                </div>
+                <div class="message sent">
+                    <p>I'm good, thanks! How about you?</p>
+                    <span class="timestamp">10:02 AM</span>
+                </div>
+                <!-- Add more messages as needed -->
+            </div>
+            <div class="chat-input">
+                <input type="text" placeholder="Type a message...">
+                <button>Send</button>
+            </div>
+        </div>
+    </div>
+    <script src="/static/script_m6.js"></script>
+</body>
+</html>

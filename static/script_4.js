@@ -192,3 +192,42 @@ function displaySuggestions(suggestions) {
       suggestionList.appendChild(listItem);
   });
 }
+
+
+
+
+
+
+
+
+function searchFriends() {
+  // Implement search functionality here
+}
+
+function performSearch() {
+  // Implement search button click functionality here
+}
+
+function showRequests() {
+  document.getElementById('friend-requests').style.display = 'block';
+  document.getElementById('suggestions').style.display = 'none';
+}
+
+function showSuggestions() {
+  document.getElementById('friend-requests').style.display = 'none';
+  document.getElementById('suggestions').style.display = 'block';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelector('.messages-link').addEventListener('click', (event) => {
+    event.preventDefault();
+    window.location.href = '/messages'; // Redirect to the messaging interface
+  });
+
+  // Initially show suggestions or requests based on the hash in the URL
+  if (window.location.hash === '#friend-requests') {
+    showRequests();
+  } else {
+    showSuggestions();
+  }
+});

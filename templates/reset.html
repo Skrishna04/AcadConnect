@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Connect - Reset Password</title>
+  <link rel="stylesheet" href="../static/styles_f.css">
+</head>
+<body>
+  <div class="forgot-password-container">
+    <div class="forgot-password-form">
+      <h2>Reset Password</h2>
+      <p class="subtitle">Enter your new password below.</p>
+       
+      <!-- Reset Password Form -->
+      <form id="resetPasswordForm" action="/reset_password" method="POST">
+        <input type="hidden" name="token" value="{{ token }}" />
+        
+        <div class="form-group">
+          <label for="password">New Password</label>
+          <input type="password" id="password" name="password" placeholder="Enter your new password" required />
+        </div>
+
+        <div class="form-group">
+          <label for="confirm_password">Confirm Password</label>
+          <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm your new password" required />
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="reset-btn">Reset Password</button>
+        </div>
+
+        <div class="extra-options">
+          <p>Remember your password? <a href="/">Back to Login</a></p>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>

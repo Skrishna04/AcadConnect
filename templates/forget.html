@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Connect - Forgot Password</title>
+  <link rel="stylesheet" href="../static/styles_f.css">
+</head>
+<body>
+  <div class="forgot-password-container">
+    <div class="forgot-password-form">
+      <h2>Forgot Password</h2>
+      <p class="subtitle">Enter your email address to reset your password.</p>
+       
+      <!-- Forgot Password Form -->
+      <form id="forgotPasswordForm" action="/forgot_password" method="POST">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" placeholder="Enter your email" required />
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="reset-btn">Reset Password</button>
+        </div>
+
+        <div class="extra-options">
+          <p>Remembered your password? <a href="/">Login</a></p>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
