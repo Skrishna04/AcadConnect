@@ -1,91 +1,44 @@
-// Store chat messages for different conversations
-const chats = {
-    1: [],
-    2: []
-};
+document.getElementById('send-button').addEventListener('click', function() {
+    const messageInput = document.getElementById('message-input');
+    const message = messageInput.value;
+    const chatId = document.querySelector('.contact.active').dataset.chatId;
+    const senderId = '1'; // Example sender ID
+    const receiverId = chatId;
 
-let currentChatId = '1';
-
-// DOM Elements
-const messageInput = document.getElementById('message-input');
-const sendButton = document.getElementById('send-button');
-const chatMessages = document.getElementById('chat-messages');
-const contacts = document.querySelectorAll('.contact');
-
-// Function to create a new message element
-function createMessageElement(message, isSent) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
-    
-    const messageP = document.createElement('p');
-    messageP.textContent = message;
-    
-    const timestamp = document.createElement('span');
-    timestamp.className = 'timestamp';
-    timestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    messageDiv.appendChild(messageP);
-    messageDiv.appendChild(timestamp);
-    
-    return messageDiv;
-}
-
-// Function to display messages for the current chat
-function displayMessages(chatId) {
-    chatMessages.innerHTML = '';
-    chats[chatId].forEach(msg => {
-        chatMessages.appendChild(createMessageElement(msg.text, msg.sent));
-    });
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-// Function to send a message
-function sendMessage() {
-    const message = messageInput.value.trim();
-    if (message) {
-        // Add message to current chat
-        chats[currentChatId].push({
-            text: message,
-            sent: true
-        });
-        
-        // Display updated messages
-        displayMessages(currentChatId);
-        
-        // Clear input
-        messageInput.value = '';
-    }
-}
-
-// Event Listeners
-sendButton.addEventListener('click', sendMessage);
-
-messageInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        sendMessage();
-    }
+    fetch('http://localhost:5000/messages', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            sender_id: senderId,
+            receiver_id: receiverId,
+            content: message
+        })
+    }).then(response => response.json())
+      .then(data => {
+          console.log('Message sent:', data);
+          messageInput.value = '';
+          loadMessages(senderId, receiverId);
+      });
 });
 
-// Handle chat switching
-contacts.forEach(contact => {
-    contact.addEventListener('click', () => {
-        // Remove active class from all contacts
-        contacts.forEach(c => c.classList.remove('active'));
-        
-        // Add active class to clicked contact
-        contact.classList.add('active');
-        
-        // Update current chat
-        currentChatId = contact.dataset.chatId;
-        
-        // Update chat header
-        const contactName = contact.querySelector('h4').textContent;
-        const headerName = document.querySelector('.chat-header h4');
-        const headerInitial = document.querySelector('.chat-header .initials');
-        headerName.textContent = contactName;
-        headerInitial.textContent = contactName[0];
-        
-        // Display messages for selected chat
-        displayMessages(currentChatId);
+function loadMessages(user1Id, user2Id) {
+    fetch(`http://localhost:5000/messages?user1_id=${user1Id}&user2_id=${user2Id}`)
+    .then(response => response.json())
+    .then(messages => {
+        const chatMessages = document.getElementById('chat-messages');
+        chatMessages.innerHTML = '';
+        messages.forEach(message => {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.textContent = message.content;
+            chatMessages.appendChild(messageElement);
+        });
     });
-}); 
+}
+
+// Load messages for the default chat
+document.addEventListener('DOMContentLoaded', function() {
+    loadMessages('1', '2'); // Example user IDs
+});
