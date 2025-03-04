@@ -1,91 +1,161 @@
-// Store chat messages for different conversations
-const chats = {
-    1: [],
-    2: []
-};
-
-let currentChatId = '1';
-
-// DOM Elements
-const messageInput = document.getElementById('message-input');
-const sendButton = document.getElementById('send-button');
-const chatMessages = document.getElementById('chat-messages');
-const contacts = document.querySelectorAll('.contact');
-
-// Function to create a new message element
-function createMessageElement(message, isSent) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+document.addEventListener('DOMContentLoaded', function() {
+    const contactsList = document.getElementById('contacts-list');
+    const messagesContainer = document.getElementById('messages-container');
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const searchInput = document.getElementById('search-input');
+    const refreshBtn = document.getElementById('refresh-btn');
     
-    const messageP = document.createElement('p');
-    messageP.textContent = message;
-    
-    const timestamp = document.createElement('span');
-    timestamp.className = 'timestamp';
-    timestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    messageDiv.appendChild(messageP);
-    messageDiv.appendChild(timestamp);
-    
-    return messageDiv;
-}
+    let currentRecipientId = null;
+    let users = [];
 
-// Function to display messages for the current chat
-function displayMessages(chatId) {
-    chatMessages.innerHTML = '';
-    chats[chatId].forEach(msg => {
-        chatMessages.appendChild(createMessageElement(msg.text, msg.sent));
-    });
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-}
+    // Load users
+    function loadUsers() {
+        fetch('/api/get_users')
+            .then(response => response.json())
+            .then(data => {
+                users = data;
+                renderUsers();
+            })
+            .catch(error => console.error('Error loading users:', error));
+    }
 
-// Function to send a message
-function sendMessage() {
-    const message = messageInput.value.trim();
-    if (message) {
-        // Add message to current chat
-        chats[currentChatId].push({
-            text: message,
-            sent: true
+    // Render users in the sidebar
+    function renderUsers() {
+        contactsList.innerHTML = '';
+        const template = document.getElementById('contact-template');
+
+        users.forEach(user => {
+            const clone = template.content.cloneNode(true);
+            const contactDiv = clone.querySelector('.contact');
+            
+            contactDiv.dataset.userId = user.id;
+            contactDiv.querySelector('.contact-name').textContent = user.name;
+            contactDiv.querySelector('.contact-email').textContent = user.email;
+
+            contactDiv.addEventListener('click', () => selectUser(user));
+            contactsList.appendChild(clone);
         });
-        
-        // Display updated messages
-        displayMessages(currentChatId);
-        
-        // Clear input
-        messageInput.value = '';
     }
-}
 
-// Event Listeners
-sendButton.addEventListener('click', sendMessage);
-
-messageInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        sendMessage();
-    }
-});
-
-// Handle chat switching
-contacts.forEach(contact => {
-    contact.addEventListener('click', () => {
-        // Remove active class from all contacts
-        contacts.forEach(c => c.classList.remove('active'));
-        
-        // Add active class to clicked contact
-        contact.classList.add('active');
-        
-        // Update current chat
-        currentChatId = contact.dataset.chatId;
+    // Select a user to chat with
+    function selectUser(user) {
+        currentRecipientId = user.id;
         
         // Update chat header
-        const contactName = contact.querySelector('h4').textContent;
-        const headerName = document.querySelector('.chat-header h4');
-        const headerInitial = document.querySelector('.chat-header .initials');
-        headerName.textContent = contactName;
-        headerInitial.textContent = contactName[0];
+        document.getElementById('chat-contact-name').textContent = user.name;
         
-        // Display messages for selected chat
-        displayMessages(currentChatId);
+        // Update active state
+        document.querySelectorAll('.contact').forEach(el => el.classList.remove('active'));
+        document.querySelector(`[data-user-id="${user.id}"]`).classList.add('active');
+        
+        // Load messages
+        loadMessages(user.id);
+        
+        // Enable input
+        messageInput.disabled = false;
+        sendButton.disabled = false;
+    }
+
+    // Load messages for a specific user
+    function loadMessages(recipientId) {
+        fetch(`/api/get_messages/${recipientId}`)
+            .then(response => response.json())
+            .then(messages => {
+                renderMessages(messages);
+            })
+            .catch(error => console.error('Error loading messages:', error));
+    }
+
+    // Render messages in the chat area
+    function renderMessages(messages) {
+        messagesContainer.innerHTML = '';
+        const template = document.getElementById('message-template');
+
+        messages.forEach(message => {
+            const clone = template.content.cloneNode(true);
+            const messageDiv = clone.querySelector('.message');
+            
+            messageDiv.classList.add(message.sent ? 'sent' : 'received');
+            messageDiv.querySelector('.message-text').textContent = message.content;
+            messageDiv.querySelector('.message-time').textContent = formatTime(message.timestamp);
+            
+            messagesContainer.appendChild(clone);
+        });
+
+        // Scroll to bottom
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    // Send a message
+    function sendMessage() {
+        if (!currentRecipientId || !messageInput.value.trim()) return;
+
+        const message = {
+            recipient_id: currentRecipientId,
+            content: messageInput.value.trim()
+        };
+
+        fetch('/api/send_message', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(message)
+        })
+        .then(response => response.json())
+        .then(() => {
+            messageInput.value = '';
+            loadMessages(currentRecipientId);
+        })
+        .catch(error => console.error('Error sending message:', error));
+    }
+
+    // Helper function to format timestamp
+    function formatTime(timestamp) {
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Event listeners
+    sendButton.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
     });
-}); 
+
+    searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filteredUsers = users.filter(user => 
+            user.name.toLowerCase().includes(searchTerm) ||
+            user.email.toLowerCase().includes(searchTerm)
+        );
+        renderFilteredUsers(filteredUsers);
+    });
+
+    refreshBtn.addEventListener('click', loadUsers);
+
+    // Disable message input until a user is selected
+    messageInput.disabled = true;
+    sendButton.disabled = true;
+
+    // Initial load
+    loadUsers();
+});
+
+// Add this function
+function renderFilteredUsers(filteredUsers) {
+    contactsList.innerHTML = '';
+    const template = document.getElementById('contact-template');
+
+    filteredUsers.forEach(user => {
+        const clone = template.content.cloneNode(true);
+        const contactDiv = clone.querySelector('.contact');
+        
+        contactDiv.dataset.userId = user.id;
+        contactDiv.querySelector('.contact-name').textContent = user.name;
+        contactDiv.querySelector('.contact-email').textContent = user.email;
+
+        contactDiv.addEventListener('click', () => selectUser(user));
+        contactsList.appendChild(clone);
+    });
+}

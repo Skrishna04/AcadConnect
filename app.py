@@ -1,22 +1,91 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify, make_response
+import os
+from flask import Flask, Blueprint, render_template, request, redirect, url_for, flash, session, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
+from flask_bcrypt import Bcrypt
+from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-import os
+from datetime import datetime, timedelta
 import csv
-import datetime
+from bson import ObjectId
+from pymongo import MongoClient
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
+print("[ENV]", os.getenv("MONGO_CLUSTER_URL"))
+
+# Configuration class
+class Config:
+    MONGO_URI = os.getenv("MONGO_CLUSTER_URL")
+    print("[CONFIG]", MONGO_URI)
+    SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
+
+# Initialize Flask app
 app = Flask(__name__)
+app.config.from_object(Config)
 
 # Secret key for session management and flash messages
 app.secret_key = 'your_secret_key'
 
-# Database setup
+# Database setup for SQLAlchemy
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.db'  # SQLite for simplicity
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
+db = SQLAlchemy(app)  # This is for SQLAlchemy
 
-# Database model for storing user data
+# Initialize extensions
+CORS(app, resources={r"/*": {"origins": "*"}})
+bcrypt = Bcrypt(app)
+
+# Initialize MongoDB client with error handling
+try:
+    # Construct the MongoDB URI with the correct format
+    mongo_uri = os.getenv("MONGO_CLUSTER_URL")
+    
+    print("Attempting to connect to MongoDB...")
+    print(f"Using connection string (without password): {mongo_uri}")
+    
+    # Initialize the client with a longer timeout
+    mongo_client = MongoClient(
+        mongo_uri
+    )
+    
+    # Test the connection
+    mongo_client.admin.command('ping')
+    
+    # Get the database
+    mongodb = mongo_client[os.getenv('MONGO_DB_NAME')]
+    
+    # Create collections if they don't exist
+    if 'messages' not in mongodb.list_collection_names():
+        mongodb.create_collection('messages')
+    if 'users' not in mongodb.list_collection_names():
+        mongodb.create_collection('users')
+    
+    print("Successfully connected to MongoDB Atlas")
+
+except Exception as e:
+    print(f"Failed to connect to MongoDB: {str(e)}")
+    print("Please check your MongoDB Atlas settings:")
+    print("1. Verify your username and password")
+    print("2. Check if your IP address is whitelisted")
+    print("3. Verify the cluster URL")
+    print(f"Connection string used: {mongo_uri}")
+    mongodb = None
+
+def check_mongodb_connection():
+    """Check if MongoDB connection is available"""
+    if not mongodb:
+        raise Exception("MongoDB connection is not available. Please check your connection settings.")
+    try:
+        # Test the connection with a ping
+        mongodb.command('ping')
+        return True
+    except Exception as e:
+        print(f"MongoDB connection error during check: {str(e)}")
+        raise Exception(f"MongoDB connection error: {str(e)}")
+
+# Database model for storing user data (SQLAlchemy)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
@@ -26,6 +95,99 @@ class User(db.Model):
 # Create the database (only run once)
 with app.app_context():
     db.create_all()
+
+# Define models for messaging (MongoDB)
+class Message:
+    @staticmethod
+    def get_messages_between_users(user1_id, user2_id):
+        check_mongodb_connection()
+        try:
+            return mongodb.messages.find({
+                "$or": [
+                    {"sender_id": user1_id, "receiver_id": user2_id},
+                    {"sender_id": user2_id, "receiver_id": user1_id}
+                ]
+            }).sort("timestamp")
+        except Exception as e:
+            print(f"Error getting messages: {str(e)}")
+            return []
+
+    @staticmethod
+    def create_message(message_data):
+        check_mongodb_connection()
+        try:
+            return mongodb.messages.insert_one(message_data)
+        except Exception as e:
+            print(f"Error creating message: {str(e)}")
+            raise
+
+# Define blueprint
+main = Blueprint('main', __name__)
+
+@main.route("/messages", methods=["GET"])
+def get_messages():
+    try:
+        check_mongodb_connection()
+        print("MongoDB connection successful")
+        
+        user1_id = request.args.get("user1_id")
+        user2_id = request.args.get("user2_id")
+        
+        if not all([user1_id, user2_id]):
+            return jsonify({"error": "Missing user IDs"}), 400
+            
+        messages = Message.get_messages_between_users(user1_id, user2_id)
+        return jsonify([{
+            "id": str(message["_id"]),
+            "content": message["content"],
+            "sender_id": message["sender_id"],
+            "receiver_id": message["receiver_id"],
+            "timestamp": message    ["timestamp"].isoformat()
+        } for message in messages])
+    except Exception as e:
+        print(f"Error in get_messages route: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@main.route("/messages", methods=["POST"])
+def send_message():
+    data = request.get_json()
+    message_data = {
+        "sender_id": data["sender_id"],
+        "receiver_id": data["receiver_id"],
+        "content": data["content"],
+        "timestamp": datetime.utcnow()
+    }
+    result = Message.create_message(message_data)
+    return jsonify({"inserted_id": str(result.inserted_id)}), 201
+
+@main.route("/users", methods=["POST"])
+def create_user():
+    data = request.get_json()
+    hashed_password = bcrypt.generate_password_hash(data["password"]).decode('utf-8')
+    user_data = {
+        "username": data["username"],
+        "email": data["email"],
+        "password": hashed_password
+    }
+    result = mongodb.users.insert_one(user_data)  # Changed from db to mongodb
+    return jsonify({"inserted_id": str(result.inserted_id)}), 201
+
+@main.route("/users/login", methods=["POST"])
+def login_user():
+    data = request.get_json()
+    user = mongodb.users.find_one({"email": data["email"]})  # Changed from db to mongodb
+    if user and bcrypt.check_password_hash(user["password"], data["password"]):
+        session["user_id"] = str(user["_id"])
+        return jsonify({"message": "Login successful"}), 200
+    return jsonify({"message": "Invalid credentials"}), 401
+
+@main.route("/users/logout", methods=["POST"])
+def logout_user():
+    session.pop("user_id", None)
+    return jsonify({"message": "Logout successful"}), 200
+
+# Register blueprints
+app.register_blueprint(main)
 
 @app.route('/')
 def start():
@@ -75,7 +237,6 @@ def create_account():
 
     # Hash the password before storing it
     hashed_password = generate_password_hash(password)
-    
 
     # Create a new user record in the database
     new_user = User(email=email, password=hashed_password, name=name)
@@ -84,7 +245,7 @@ def create_account():
 
     flash('Account created successfully! Please log in.', 'success')
     resp = make_response(redirect(url_for('index')))
-    resp.set_cookie('email', email, expires=datetime.datetime.today() + datetime.timedelta(days=30))
+    resp.set_cookie('email', email, expires=datetime.now() + timedelta(days=30))
     return resp
 
 # Dashboard page after successful login
@@ -271,9 +432,127 @@ def get_suggestions():
 @app.route('/messages')
 def messages():
     if 'user_id' not in session:
+        flash('Please login first', 'error')
         return redirect(url_for('login'))
+    
+    # Get current user's info
     user = User.query.get(session['user_id'])
-    return render_template('messages.html', user=user)
+    if not user:
+        flash('User not found', 'error')
+        return redirect(url_for('login'))
+    
+    return render_template('messages.html', current_user=user)
+
+@app.route('/api/get_users')
+def get_users():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        current_user_id = session['user_id']
+        
+        # Debug print
+        print(f"Current user ID: {current_user_id}")
+        
+        # Get all users except current user
+        users = User.query.filter(User.id != current_user_id).all()
+        
+        # Debug print
+        print(f"Found {len(users)} other users")
+        
+        users_list = [{
+            'id': user.id,
+            'name': user.name,
+            'email': user.email
+        } for user in users]
+        
+        return jsonify(users_list)
+    except Exception as e:
+        print(f"Error in get_users: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/get_messages/<recipient_id>')
+def get_chat_messages(recipient_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    sender_id = session['user_id']
+    
+    # Convert IDs to integers for comparison
+    sender_id = int(sender_id)
+    recipient_id = int(recipient_id)
+    
+    # Get messages between these users from MongoDB
+    messages = mongodb.messages.find({  # Changed from db to mongodb
+        '$or': [
+            {'sender_id': sender_id, 'recipient_id': recipient_id},
+            {'sender_id': recipient_id, 'recipient_id': sender_id}
+        ]
+    }).sort('timestamp', 1)
+    
+    # Format messages for the frontend
+    messages_list = []
+    for msg in messages:
+        messages_list.append({
+            'id': str(msg['_id']),
+            'content': msg['content'],
+            'timestamp': msg['timestamp'].isoformat(),
+            'sent': msg['sender_id'] == sender_id
+        })
+    
+    return jsonify(messages_list)
+
+@app.route('/api/send_message', methods=['POST'])
+def send_message():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    data = request.get_json()
+    sender_id = session['user_id']
+    recipient_id = data.get('recipient_id')
+    content = data.get('content')
+    
+    if not all([recipient_id, content]):
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    # Create new message in MongoDB
+    message = {
+        'sender_id': int(sender_id),
+        'recipient_id': int(recipient_id),
+        'content': content,
+        'timestamp': datetime.utcnow(),
+        'read': False
+    }
+    
+    result = mongodb.messages.insert_one(message)  # Changed from db to mongodb
+    
+    return jsonify({
+        'id': str(result.inserted_id),
+        'timestamp': message['timestamp'].isoformat()
+    }), 201
+
+@app.route('/test_connection')
+def test_connection():
+    try:
+        # Test MongoDB connection
+        check_mongodb_connection()
+        
+        # Get database info
+        db_stats = mongodb.command("dbstats")
+        
+        return jsonify({
+            "status": "success",
+            "message": "Connected to MongoDB",
+            "database_name": os.getenv('MONGO_DB_NAME'),
+            "collections": mongodb.list_collection_names(),
+            "stats": db_stats
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e),
+            "connection_string": f"mongodb+srv://{os.getenv('MONGO_USERNAME')}:****@{os.getenv('MONGO_CLUSTER_URL')}"
+        }), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
