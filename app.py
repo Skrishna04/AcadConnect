@@ -421,45 +421,89 @@ def profile():
 
     return render_template('profile.html', user=profile_details)
 
+
+
+
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
+
+
+# Helper function to check allowed file types (for uploading event poster)
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'jpg', 'jpeg', 'png'}
+
+
+# Upload folder configuration for event poster upload
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Ensure the upload folder exists
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
+
+# Helper function to check allowed file types (for uploading event poster)
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'jpg', 'jpeg', 'png'}
+
+# Upload folder configuration for event poster upload
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+
+# Ensure the upload folder exists
+if not os.path.exists(app.config['UPLOAD_FOLDER']):
+    os.makedirs(app.config['UPLOAD_FOLDER'])
+
+# Helper function to check allowed file types (for uploading event poster)
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'jpg', 'jpeg', 'png'}
+
 @app.route('/noti')
 def noti():
     # You can pass any necessary data to the template here if needed
     return render_template('noti.html')
-    return render_template('noti.html', notifications=notifications_data)
 
-
-import csv
-from flask import request, flash, redirect, url_for, render_template
-
-# Route for the event submission page
-# Route to submit event (store data in CSV)
 @app.route('/submit_event', methods=['POST'])
 def submit_event():
     if 'user_id' not in session:
         flash('You must be logged in to submit an event.', 'danger')
         return redirect(url_for('index'))  # Redirect to login page if not logged in
 
+    # Retrieve user_id from the session
+    user_id = session['user_id']
+    
+    # Get the data from the form
     event_name = request.form['event_name']
     college_name = request.form['college_name']
     event_description = request.form['event_description']
     event_poster = request.files['event_poster']
     event_date = request.form['event_date']
     event_time = request.form['event_time']
-      # Optional: For event poster image upload
 
+    # Optional: Handle event poster image upload
     if event_poster and allowed_file(event_poster.filename):
+        # Secure the filename and save it to the uploads folder
         filename = secure_filename(event_poster.filename)
         poster_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         event_poster.save(poster_path)
+        
+        # Normalize the file path for compatibility
+        poster_path = os.path.normpath(poster_path).replace("\\", "/")
     else:
-        poster_path = None
+        poster_path = None  # If no poster is uploaded, set to None
+
+    # Debugging: Check if poster path is correctly generated
+    print(f"Poster Path: {poster_path}")
 
     # Save event data into a CSV file
-    with open('events_data.csv', mode='a', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow([event_name, event_date, event_description, poster_path])
-
-    flash(f"Event '{event_name}' has been successfully submitted!", 'success')
+    try:
+        with open('events_data.csv', mode='a', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow([user_id, event_name, college_name, event_description, poster_path, event_date, event_time])
+        
+        flash(f"Event '{event_name}' has been successfully submitted!", 'success')
+    except Exception as e:
+        flash(f"An error occurred while saving the event: {e}", 'danger')
+        print(f"Error saving to CSV: {e}")
 
     return redirect(url_for('event_success'))  # Redirect to success page
 
@@ -468,41 +512,34 @@ def submit_event():
 def event_success():
     return render_template('event_success.html')  # Show success message or success page
 
-
-
-
 @app.route('/events')
 def events():
-    # Check if the user is logged in
-    if 'user_id' not in session:
-        flash('You must be logged in to view notifications.', 'danger')
-        return redirect(url_for('index'))  # Redirect to the index or login page
-
-    # Initialize a list to store event details
-    events_list = []
+    events = []
 
     # Read events data from the CSV file
     try:
         with open('events_data.csv', mode='r') as csvfile:
             reader = csv.reader(csvfile)
-            next(reader)  # Skip header row if necessary
             for row in reader:
-                if len(row) >= 5:  # Ensure that the row has enough columns
-                    event_details = {
-                        'event_name': row[0],  # Event name
-                        'college_name': row[1],  # College name
-                        'event_description': row[2],  # Event description
-                        'event_poster': row[3],  # Event poster path (image URL)
-                        'event_date': row[4],  # Event date
-                        'event_time': row[5]   # Event time
+                if len(row) >= 7:  # Ensure the row has at least 7 elements
+                    event = {
+                        'user_id': row[0],
+                        'event_name': row[1],
+                        'college_name': row[2],
+                        'event_description': row[3],
+                        'event_poster': row[4],
+                        'event_date': row[5],
+                        'event_time': row[6]
                     }
-                    events_list.append(event_details)
+                    events.append(event)
+                else:
+                    # Handle the case where the row does not have enough elements
+                    print(f"Skipping invalid row: {row}")
     except FileNotFoundError:
-        flash('Event data file not found.', 'danger')
+        flash('No events found yet.', 'warning')
 
-    return render_template('events.html', events=events_list)# Replace 'yourapp' with the actual module n
-
-
+    # Render the events page with the events data
+    return render_template('events.html', events=events)
 
 
 
@@ -520,27 +557,37 @@ def search():
 
     return jsonify(results)
 
-# Route for getting friend requests
-@app.route('/requests')
-def get_requests():
-    # Fetch friend requests from the database or any data source
-    requests = [
-        {"name": "John Doe"},
-        {"name": "Jane Smith"},
-        {"name": "Alice Johnson"}
-    ]
-    return jsonify(requests)
+@app.route('/req_sug')
+def req_sug():
+    requests = []
+    suggestions = []
 
-# Route for getting friend suggestions
-@app.route('/suggestions')
-def get_suggestions():
-    # Fetch friend suggestions from the database or any data source
-    suggestions = [
-        {"name": "Bob Brown"},
-        {"name": "Charlie Davis"},
-        {"name": "Eve White"}
-    ]
-    return jsonify(suggestions)
+    # Read students data from the CSV file (assuming student data is stored in student_data.csv)
+    try:
+        with open('student_data.csv', mode='r') as csvfile:
+            reader = csv.reader(csvfile)
+            for row in reader:
+                if len(row) >= 3:  # Ensure the row has at least 3 elements (id, name, branch)
+                    student = {
+                        'id': row[0],
+                        'name': row[1],
+                        'branch': row[2],
+                        
+                    }
+                    if student['id'] != str(session['user_id']):  # Exclude the current user
+                        if len(requests) < 2:
+                            requests.append(student)
+                        else:
+                            suggestions.append(student)
+    except FileNotFoundError:
+        flash('No students found yet.', 'warning')
+
+    # Sort requests and suggestions by name
+    requests.sort(key=lambda x: x['name'])
+    suggestions.sort(key=lambda x: x['name'])
+
+    # Render the friend requests page with the requests and suggestions data
+    return render_template('req_sug.html', requests=requests, suggestions=suggestions)
 
 @app.route('/messages')
 def messages():

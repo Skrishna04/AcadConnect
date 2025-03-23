@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friend Requests and Suggestions</title>
+    <link rel="stylesheet" href="/static/styles_10.css">
+</head>
+<body>
+    <div class="container">
+        <h2 class="section-title">Friend Requests</h2>
+        {% if requests %}
+            {% for request in requests %}
+                <div class="friend-request">
+                    <img src="{{ url_for('static', filename=request.profile_picture) }}" alt="{{ request.name }}'s Profile Picture">
+                    <div>
+                        <p><strong>{{ request.name }}</strong></p>
+                        <p>{{ request.mutual_friends }} mutual friends</p>
+                    </div>
+                    <div class="actions">
+                        <button>Confirm</button>
+                        <button class="decline">Delete</button>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No friend requests found.</p>
+        {% endif %}
+        <h2 class="section-title">People You May Know</h2>
+        {% if suggestions %}
+            {% for suggestion in suggestions %}
+                <div class="suggestion">
+                    <img src="{{ url_for('static', filename=suggestion.profile_picture) }}" alt="{{ suggestion.name }}'s Profile Picture">
+                    <div>
+                        <p><strong>{{ suggestion.name }}</strong></p>
+                        <p>{{ suggestion.mutual_friends }} mutual friends</p>
+                    </div>
+                    <div class="actions">
+                        <button>Add Friend</button>
+                        <button class="remove">Remove</button>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No suggestions found.</p>
+        {% endif %}
+    </div>
+    <script src="/static/script_10.js"></script>
+</body>
+</html>

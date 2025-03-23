@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Friend Suggestions and Requests</title>
-  <link rel="stylesheet" href="/AcadConnect/static/styles_4.css">
-  <script src="/AcadConnect/static/script_4.js"></script>
+  <link rel="stylesheet" href="/static/styles_4.css">
+  <script src="static/script_4.js"></script>
 </head>
 <body>
   <!-- Navigation Bar -->
@@ -18,7 +18,7 @@
     <ul class="nav-links">
       <li><a href="{{ url_for('home') }}">Home</a></li>
       <li><a href="{{ url_for('profile') }}">Profile</a></li>
-      <li><a href="#friend-requests" onclick="showRequests()">Requests and suggestions</a></li>
+      <li><a href="{{ url_for('req_sug') }}">Request and Suggestions</a></li>
       <li><a href="{{ url_for('events') }}">Events</a></li>
       <li><a href="{{ url_for('noti') }}">Notification</a></li>
       <li><a href="{{ url_for('messages') }}" class="messages-link">Messages</a></li>

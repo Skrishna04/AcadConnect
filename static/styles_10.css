@@ -1,0 +1,52 @@
+/* Add your CSS styles here */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5;
+    margin: 0;
+    padding: 0;
+}
+.container {
+    max-width: 800px;
+    margin: 20px auto;
+    background-color: #fff;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+}
+.section-title {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+.friend-request, .suggestion {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+.friend-request img, .suggestion img {
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    margin-right: 15px;
+}
+.friend-request .actions, .suggestion .actions {
+    margin-left: auto;
+}
+.friend-request .actions button, .suggestion .actions button {
+    background-color: #1877f2;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 5px;
+}
+.friend-request .actions button:hover, .suggestion .actions button:hover {
+    background-color: #155ab8;
+}
+.friend-request .actions .decline, .suggestion .actions .remove {
+    background-color: #e4e6eb;
+    color: #050505;
+}
+.friend-request .actions .decline:hover, .suggestion .actions .remove:hover {
+    background-color: #c4c4c4;
+}

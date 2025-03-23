@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event Notifications</title>
-    <link rel="stylesheet" href="/AcadConnect/static/styles.css">
+    <title>Upcoming Events</title>
+    <link rel="stylesheet" href="/static/styles_9.css">
+    <script src="/static/script_9.js"></script>
 </head>
 <body>
     <h1>Upcoming Events</h1>
@@ -17,7 +18,9 @@
                     <p><strong>Description:</strong> {{ event.event_description }}</p>
                     <p><strong>Date:</strong> {{ event.event_date }}</p>
                     <p><strong>Time:</strong> {{ event.event_time }}</p>
-                    <img src="{{ url_for('static', filename=event.event_poster) }}" alt="{{ event.event_name }} Poster" class="event-poster">
+                    {% if event.event_poster %}
+                        <img src="{{ url_for('static', filename=event.event_poster) }}" alt="{{ event.event_name }} Poster" class="event-poster">
+                    {% endif %}
                 </div>
             {% endfor %}
         {% else %}
