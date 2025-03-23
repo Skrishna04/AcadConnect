@@ -10,10 +10,16 @@ import csv
 from bson import ObjectId
 from pymongo import MongoClient
 from dotenv import load_dotenv
+  # Assuming your file is named app.py
+
 
 # Load environment variables from .env file
 load_dotenv()
-print("[ENV]", os.getenv("MONGO_CLUSTER_URL"))
+MONGO_URI = os.getenv("MONGO_URI")
+
+# Initialize Flask app
+app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = 'uploads'
 
 # Configuration class
 class Config:
@@ -21,9 +27,10 @@ class Config:
     print("[CONFIG]", MONGO_URI)
     SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
 
-# Initialize Flask app
-app = Flask(__name__)
 app.config.from_object(Config)
+
+# Ensure the upload folder exists
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Secret key for session management and flash messages
 app.secret_key = 'your_secret_key'
@@ -32,6 +39,25 @@ app.secret_key = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.db'  # SQLite for simplicity
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)  # This is for SQLAlchemy
+
+
+app.config['UPLOAD_FOLDER'] = 'uploads'
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+
+
+if MONGO_URI:
+    try:
+        client = MongoClient(MONGO_URI)
+        print("Successfully connected to MongoDB!")
+    except Exception as e:
+        print(f"Failed to connect to MongoDB: {e}")
+else:
+    print("MongoDB connection string is missing.")
+
+# Helper function to check allowed file types (if you are uploading any files)
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'jpg', 'jpeg', 'png'}
 
 # Initialize extensions
 CORS(app, resources={r"/*": {"origins": "*"}})
@@ -142,7 +168,7 @@ def get_messages():
             "content": message["content"],
             "sender_id": message["sender_id"],
             "receiver_id": message["receiver_id"],
-            "timestamp": message    ["timestamp"].isoformat()
+            "timestamp": message["timestamp"].isoformat()
         } for message in messages])
     except Exception as e:
         print(f"Error in get_messages route: {str(e)}")
@@ -395,6 +421,93 @@ def profile():
 
     return render_template('profile.html', user=profile_details)
 
+@app.route('/noti')
+def noti():
+    # You can pass any necessary data to the template here if needed
+    return render_template('noti.html')
+    return render_template('noti.html', notifications=notifications_data)
+
+
+import csv
+from flask import request, flash, redirect, url_for, render_template
+
+# Route for the event submission page
+# Route to submit event (store data in CSV)
+@app.route('/submit_event', methods=['POST'])
+def submit_event():
+    if 'user_id' not in session:
+        flash('You must be logged in to submit an event.', 'danger')
+        return redirect(url_for('index'))  # Redirect to login page if not logged in
+
+    event_name = request.form['event_name']
+    college_name = request.form['college_name']
+    event_description = request.form['event_description']
+    event_poster = request.files['event_poster']
+    event_date = request.form['event_date']
+    event_time = request.form['event_time']
+      # Optional: For event poster image upload
+
+    if event_poster and allowed_file(event_poster.filename):
+        filename = secure_filename(event_poster.filename)
+        poster_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        event_poster.save(poster_path)
+    else:
+        poster_path = None
+
+    # Save event data into a CSV file
+    with open('events_data.csv', mode='a', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow([event_name, event_date, event_description, poster_path])
+
+    flash(f"Event '{event_name}' has been successfully submitted!", 'success')
+
+    return redirect(url_for('event_success'))  # Redirect to success page
+
+# Route to show event submission success page
+@app.route('/event_success')
+def event_success():
+    return render_template('event_success.html')  # Show success message or success page
+
+
+
+
+@app.route('/events')
+def events():
+    # Check if the user is logged in
+    if 'user_id' not in session:
+        flash('You must be logged in to view notifications.', 'danger')
+        return redirect(url_for('index'))  # Redirect to the index or login page
+
+    # Initialize a list to store event details
+    events_list = []
+
+    # Read events data from the CSV file
+    try:
+        with open('events_data.csv', mode='r') as csvfile:
+            reader = csv.reader(csvfile)
+            next(reader)  # Skip header row if necessary
+            for row in reader:
+                if len(row) >= 5:  # Ensure that the row has enough columns
+                    event_details = {
+                        'event_name': row[0],  # Event name
+                        'college_name': row[1],  # College name
+                        'event_description': row[2],  # Event description
+                        'event_poster': row[3],  # Event poster path (image URL)
+                        'event_date': row[4],  # Event date
+                        'event_time': row[5]   # Event time
+                    }
+                    events_list.append(event_details)
+    except FileNotFoundError:
+        flash('Event data file not found.', 'danger')
+
+    return render_template('events.html', events=events_list)# Replace 'yourapp' with the actual module n
+
+
+
+
+
+
+
 # Route for searching users
 @app.route('/search')
 def search():
@@ -516,43 +629,4 @@ def send_message():
         return jsonify({'error': 'Missing required fields'}), 400
     
     # Create new message in MongoDB
-    message = {
-        'sender_id': int(sender_id),
-        'recipient_id': int(recipient_id),
-        'content': content,
-        'timestamp': datetime.utcnow(),
-        'read': False
-    }
-    
-    result = mongodb.messages.insert_one(message)  # Changed from db to mongodb
-    
-    return jsonify({
-        'id': str(result.inserted_id),
-        'timestamp': message['timestamp'].isoformat()
-    }), 201
-
-@app.route('/test_connection')
-def test_connection():
-    try:
-        # Test MongoDB connection
-        check_mongodb_connection()
-        
-        # Get database info
-        db_stats = mongodb.command("dbstats")
-        
-        return jsonify({
-            "status": "success",
-            "message": "Connected to MongoDB",
-            "database_name": os.getenv('MONGO_DB_NAME'),
-            "collections": mongodb.list_collection_names(),
-            "stats": db_stats
-        })
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e),
-            "connection_string": f"mongodb+srv://{os.getenv('MONGO_USERNAME')}:****@{os.getenv('MONGO_CLUSTER_URL')}"
-        }), 500
-
-if __name__ == '__main__':
-    app.run(debug=True)
+   

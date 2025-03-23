@@ -1,0 +1,48 @@
+/* LinkedIn Theme CSS */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f3f2ef;
+    color: #333;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .event-container {
+    max-width: 800px;
+    margin: 50px auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  h2 {
+    color: #0073b1;
+    text-align: center;
+  }
+  
+  .event-detail {
+    margin-top: 20px;
+  }
+  
+  .event-detail h3, .event-detail p {
+    margin: 10px 0;
+  }
+  
+  #eventPosterContainer {
+    text-align: center;
+    margin-top: 20px;
+  }
+  
+  #eventPoster {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  small {
+    display: block;
+    margin-top: 5px;
+    color: #666;
+  }
