@@ -5,39 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Friend Requests and Suggestions</title>
     <link rel="stylesheet" href="/static/styles_10.css">
+    <script src="/static/script_10.js"></script>
 </head>
 <body>
     <div class="container">
         <h2 class="section-title">Friend Requests</h2>
         {% if requests %}
             {% for request in requests %}
-                <div class="friend-request">
+                <div class="friend-request" id="request-{{ request.id }}">
                     <img src="{{ url_for('static', filename=request.profile_picture) }}" alt="{{ request.name }}'s Profile Picture">
                     <div>
                         <p><strong>{{ request.name }}</strong></p>
                         <p>{{ request.mutual_friends }} mutual friends</p>
                     </div>
                     <div class="actions">
-                        <button>Confirm</button>
-                        <button class="decline">Delete</button>
+                        <button class="confirm-btn" data-id="{{ request.id }}">Confirm</button>
+                        <button class="decline-btn" data-id="{{ request.id }}">Delete</button>
                     </div>
                 </div>
             {% endfor %}
         {% else %}
             <p>No friend requests found.</p>
         {% endif %}
+
         <h2 class="section-title">People You May Know</h2>
         {% if suggestions %}
             {% for suggestion in suggestions %}
-                <div class="suggestion">
+                <div class="suggestion" id="suggestion-{{ suggestion.id }}">
                     <img src="{{ url_for('static', filename=suggestion.profile_picture) }}" alt="{{ suggestion.name }}'s Profile Picture">
                     <div>
                         <p><strong>{{ suggestion.name }}</strong></p>
                         <p>{{ suggestion.mutual_friends }} mutual friends</p>
                     </div>
                     <div class="actions">
-                        <button>Add Friend</button>
-                        <button class="remove">Remove</button>
+                        <button class="add-friend-btn" data-id="{{ suggestion.id }}">Add Friend</button>
+                        <button class="remove-btn" data-id="{{ suggestion.id }}">Remove</button>
                     </div>
                 </div>
             {% endfor %}
@@ -45,6 +47,58 @@
             <p>No suggestions found.</p>
         {% endif %}
     </div>
+
     <script src="/static/script_10.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Confirm Friend Request (Add Friend)
+            $('.confirm-btn').on('click', function() {
+                var requestId = $(this).data('id');
+                $.post('/add_friend', { id: requestId }, function(response) {
+                    if (response.success) {
+                        $('#request-' + requestId).remove();
+                    } else {
+                        alert('Error adding friend');
+                    }
+                });
+            });
+
+            // Decline Friend Request (Delete)
+            $('.decline-btn').on('click', function() {
+                var requestId = $(this).data('id');
+                $.post('/delete_request', { id: requestId }, function(response) {
+                    if (response.success) {
+                        $('#request-' + requestId).remove();
+                    } else {
+                        alert('Error deleting request');
+                    }
+                });
+            });
+
+            // Add Friend (From Suggestions)
+            $('.add-friend-btn').on('click', function() {
+                var suggestionId = $(this).data('id');
+                $.post('/add_friend', { id: suggestionId }, function(response) {
+                    if (response.success) {
+                        $('#suggestion-' + suggestionId).remove();
+                    } else {
+                        alert('Error adding friend');
+                    }
+                });
+            });
+
+            // Remove Suggestion
+            $('.remove-btn').on('click', function() {
+                var suggestionId = $(this).data('id');
+                $.post('/remove_suggestion', { id: suggestionId }, function(response) {
+                    if (response.success) {
+                        $('#suggestion-' + suggestionId).remove();
+                    } else {
+                        alert('Error removing suggestion');
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>
