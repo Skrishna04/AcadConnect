@@ -3,64 +3,195 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Friend Suggestions and Requests</title>
+  <title>Activity Desk</title>
   <link rel="stylesheet" href="/static/styles_4.css">
-  <script src="static/script_4.js"></script>
+  <script src="/static/script_4.js"></script>
+  <style>
+    .nav-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+
+    .nav-card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+    }
+
+    .nav-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .nav-card i {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .nav-card h3 {
+      margin: 0;
+      color: #333;
+    }
+
+    .nav-card p {
+      margin: 5px 0 0;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .notification-badge {
+      background: #ff4444;
+      color: white;
+      border-radius: 50%;
+      padding: 2px 6px;
+      font-size: 12px;
+      position: absolute;
+      top: -5px;
+      right: -5px;
+    }
+
+    .search-container {
+      margin: 20px;
+      text-align: center;
+    }
+
+    .search-input {
+      padding: 10px;
+      width: 80%;
+      max-width: 500px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+
+    .search-button {
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .profile-section {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      background: white;
+      padding: 10px 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      z-index: 1000;
+    }
+
+    .profile-avatar {
+      width: 40px;
+      height: 40px;
+      background: #007bff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+    }
+
+    .profile-info h2 {
+      margin: 0;
+      font-size: 16px;
+      color: #333;
+    }
+
+    .profile-info p {
+      margin: 5px 0 0;
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
 </head>
 <body>
-  <!-- Navigation Bar -->
-  <nav class="navbar">
-    <h1 class="logo">MySocial</h1>
-    <div class="nav-search">
-      <input type="text" id="search-bar" placeholder="Search for people..." onkeyup="searchFriends()">
-      <button onclick="performSearch()">🔍</button>
-    </div>
-    <ul class="nav-links">
-      <li><a href="{{ url_for('home') }}">Home</a></li>
-      <li><a href="{{ url_for('profile') }}">Profile</a></li>
-      <li><a href="{{ url_for('req_sug') }}">Request and Suggestions</a></li>
-      <li><a href="{{ url_for('events') }}">Events</a></li>
-      <li><a href="{{ url_for('noti') }}">Notification</a></li>
-      <li><a href="{{ url_for('messages') }}" class="messages-link">Messages</a></li>
-    </ul>
-  </nav>
-    
-  <!-- Profile Bar -->
-  <div class="profile-bar">
+  <!-- Profile Section -->
+  <div class="profile-section">
     <div class="profile-avatar">
       <span id="profile-first-letter">{{ user.name[0] }}</span>
     </div>
     <div class="profile-info">
       <h2 id="profile-name">{{ user.name }}</h2>
-      <p>Let’s make new connections today!</p>
+      <p>Welcome back!</p>
     </div>
   </div>
 
-  <!-- Main Content -->
-  <div class="container">
-    <div class="main-sections">
-      <!-- Friend Requests Section -->
-      <section id="friend-requests" class="friend-requests">
-        <h2>Friend Requests</h2>
-        <div class="request-list" id="request-list">
-          <!-- Friend requests will be displayed here -->
-        </div>
-      </section>
+  <!-- Header -->
+  <header style="text-align: center; padding: 20px;">
+    <h1 class="logo">Activity Desk</h1>
+  </header>
 
-      <!-- Friend Suggestions Section -->
-      <section id="suggestions" class="suggestions">
-        <h2>People You May Know</h2>
-        <div class="suggestion-list" id="suggestion-list">
-          <!-- Suggested friends will be displayed here -->
-        </div>
-      </section>
-    </div>
+  <!-- Search Bar -->
+  <div class="search-container">
+    <input type="text" class="search-input" placeholder="Search for people..." onkeyup="searchFriends()">
+    <button class="search-button" onclick="performSearch()">🔍 Search</button>
+  </div>
+
+  <!-- Navigation Cards -->
+  <div class="nav-cards">
+    <a href="{{ url_for('home') }}" class="nav-card">
+      <i>🏠</i>
+      <h3>Home</h3>
+      <p>Your main dashboard</p>
+    </a>
+
+    <a href="{{ url_for('profile') }}" class="nav-card">
+      <i>👤</i>
+      <h3>Profile</h3>
+      <p>View and edit your profile</p>
+    </a>
+
+    <a href="{{ url_for('req_sug') }}" class="nav-card">
+      <i>👥</i>
+      <h3>Requests & Suggestions</h3>
+      <p>Manage your connections</p>
+    </a>
+
+    <a href="{{ url_for('events') }}" class="nav-card">
+      <i>🎉</i>
+      <h3>Events/Notifications</h3>
+      <p>View upcoming events</p>
+    </a>
+
+    <a href="{{ url_for('noti') }}" class="nav-card">
+      <i>🔔</i>
+      <h3>Add Events</h3>
+      <p>Stay updated with events</p>
+      
+    </a>
+
+    <a href="{{ url_for('messages') }}" class="nav-card">
+      <i>💬</i>
+      <h3>Messages</h3>
+      <p>Chat with your connections</p>
+    </a>
   </div>
 
   <!-- Footer -->
   <footer>
     <p>&copy; 2025 MySocial. All Rights Reserved.</p>
   </footer>
-
 </body>
 </html>

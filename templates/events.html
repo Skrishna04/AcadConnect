@@ -1,31 +1,251 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upcoming Events</title>
-    <link rel="stylesheet" href="/static/styles_9.css">
-    <script src="/static/script_9.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Events</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #eacbc7, #4c6fcd);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      color: #333;
+      min-height: 100vh;
+    }
+
+    .header {
+      width: 90%;
+      max-width: 700px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 20px;
+      color: #fff;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+    
+    .header-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .compose-button {
+      background: linear-gradient(135deg, #007bff, #6610f2);
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: 0.3s;
+    }
+
+    .compose-button:hover {
+      background: linear-gradient(135deg, #0056b3, #520dc2);
+    }
+    
+    .clear-button {
+      background: linear-gradient(135deg, #3532bc, #e0c5c8);
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: 0.3s;
+    }
+
+    .clear-button:hover {
+      background: linear-gradient(135deg, #bd2130, #a71d2a);
+    }
+
+    #eventsContainer {
+      width: 90%;
+      max-width: 700px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .event-container {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      display: flex;
+      align-items: center;
+      color: #333;
+    }
+
+    .event-image {
+      width: 200px;
+      height: 200px;
+      border-radius: 10px;
+      object-fit: cover;
+      margin-right: 20px;
+    }
+
+    .event-details {
+      flex: 1;
+    }
+
+    h2 {
+      color: #007bff;
+      margin-bottom: 10px;
+    }
+
+    p {
+      margin: 5px 0;
+    }
+
+    .event-info {
+      font-weight: 600;
+    }
+
+    #noEvents {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      width: 90%;
+      max-width: 700px;
+      text-align: center;
+      color: #333;
+      margin-top: 40px;
+    }
+  </style>
 </head>
 <body>
-    <h1>Upcoming Events</h1>
-    <div class="events-container">
-        {% if events %}
-            {% for event in events %}
-                <div class="event">
-                    <h2>{{ event.event_name }}</h2>
-                    <p><strong>College:</strong> {{ event.college_name }}</p>
-                    <p><strong>Description:</strong> {{ event.event_description }}</p>
-                    <p><strong>Date:</strong> {{ event.event_date }}</p>
-                    <p><strong>Time:</strong> {{ event.event_time }}</p>
-                    {% if event.event_poster %}
-                        <img src="{{ url_for('static', filename=event.event_poster) }}" alt="{{ event.event_name }} Poster" class="event-poster">
-                    {% endif %}
-                </div>
-            {% endfor %}
-        {% else %}
-            <p>No events found.</p>
-        {% endif %}
+  <div class="header">
+    <h1>Event Details</h1>
+    <div class="header-buttons">
+      <button class="clear-button" onclick="clearAllEvents()">Clear All</button>
+      <button class="compose-button" onclick="window.location.href='{{ url_for('noti') }}'">Compose</button>
     </div>
+  </div>
+
+  <div id="eventsContainer">
+    <!-- Events will be dynamically added here -->
+  </div>
+
+  <div id="noEvents" style="display: none;">
+    <p>No events to display. Click 'Compose' to add a new event.</p>
+  </div>
+
+  <script>
+    // Function to clear all events
+    function clearAllEvents() {
+      if (confirm("Are you sure you want to delete all events? This cannot be undone.")) {
+        // Remove the events array and any single event data
+        localStorage.removeItem("eventsArray");
+        localStorage.removeItem("eventDetails");
+        localStorage.removeItem("eventPhoto");
+        
+        // Clear the events container and show the "no events" message
+        const eventsContainer = document.getElementById("eventsContainer");
+        const noEvents = document.getElementById("noEvents");
+        
+        eventsContainer.innerHTML = '';
+        noEvents.style.display = 'block';
+      }
+    }
+  
+    document.addEventListener("DOMContentLoaded", function() {
+      // Function to display events
+      function displayEvents() {
+        const eventsContainer = document.getElementById("eventsContainer");
+        const noEvents = document.getElementById("noEvents");
+        
+        // Get both the single event and the events array
+        let newEvent = null;
+        let eventsArray = [];
+        
+        try {
+          // Try to get the single event first
+          const eventDetailsStr = localStorage.getItem("eventDetails");
+          const eventPhoto = localStorage.getItem("eventPhoto");
+          
+          if (eventDetailsStr) {
+            newEvent = JSON.parse(eventDetailsStr);
+            if (eventPhoto) {
+              newEvent.imageData = eventPhoto;
+            }
+          }
+          
+          // Now get existing events array if it exists
+          const eventsArrayStr = localStorage.getItem("eventsArray");
+          if (eventsArrayStr) {
+            eventsArray = JSON.parse(eventsArrayStr);
+          }
+          
+          // If we have a new single event, add it to the array and clear the single storage
+          if (newEvent) {
+            eventsArray.unshift(newEvent);
+            localStorage.setItem("eventsArray", JSON.stringify(eventsArray));
+            localStorage.removeItem("eventDetails");
+            localStorage.removeItem("eventPhoto");
+          }
+        } catch (error) {
+          console.error("Error processing events:", error);
+        }
+        
+        // Now display all events
+        if (eventsArray.length > 0) {
+          // Clear the container
+          eventsContainer.innerHTML = '';
+          
+          // Add each event to the page
+          eventsArray.forEach(function(event) {
+            const eventDiv = document.createElement('div');
+            eventDiv.className = 'event-container';
+            
+            let eventHTML = '';
+            
+            // Add image if available
+            if (event.imageData) {
+              eventHTML += `<img class="event-image" src="${event.imageData}" alt="Event Image">`;
+            }
+            
+            // Add event details
+            eventHTML += `
+              <div class="event-details">
+                <h2>${event.event_name || ''}</h2>
+                <p><span class="event-info">College:</span> <span>${event.college_name || ''}</span></p>
+                <p><span class="event-info">Description:</span> <span>${event.event_description || ''}</span></p>
+                <p><span class="event-info">Date:</span> <span>${event.event_date || ''}</span></p>
+                <p><span class="event-info">Time:</span> <span>${event.event_time || ''}</span></p>
+              </div>
+            `;
+            
+            eventDiv.innerHTML = eventHTML;
+            eventsContainer.appendChild(eventDiv);
+          });
+          
+          // Hide the "no events" message
+          noEvents.style.display = 'none';
+        } else {
+          // No events to display
+          eventsContainer.innerHTML = '';
+          noEvents.style.display = 'block';
+        }
+      }
+      
+      // Run the display function when the page loads
+      displayEvents();
+    });
+  </script>
 </body>
 </html>

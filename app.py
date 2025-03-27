@@ -505,7 +505,7 @@ def submit_event():
         flash(f"An error occurred while saving the event: {e}", 'danger')
         print(f"Error saving to CSV: {e}")
 
-    return redirect(url_for('event_success'))  # Redirect to success page
+    return redirect(url_for('events'))
 
 # Route to show event submission success page
 @app.route('/event_success')
@@ -523,7 +523,7 @@ def events():
             for row in reader:
                 if len(row) >= 7:  # Ensure the row has at least 7 elements
                     event = {
-                        'user_id': row[0],
+                        'id': row[0],  # Using user_id as the event id for now
                         'event_name': row[1],
                         'college_name': row[2],
                         'event_description': row[3],

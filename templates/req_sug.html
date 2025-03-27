@@ -4,8 +4,247 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Friend Requests and Suggestions</title>
-    <link rel="stylesheet" href="/static/styles_10.css">
-    <script src="/static/script_10.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #6e8efb, #a777e3);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            color: #333;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            padding: 40px 0;
+        }
+
+        .section-title {
+            color: #fff;
+            font-size: 28px;
+            margin-top: 40px;
+            margin-bottom: 25px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.4);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            font-weight: 600;
+        }
+
+        .friend-request, .suggestion {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 18px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .friend-request:hover, .suggestion:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .avatar-circle {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4e54c8, #8f94fb);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 32px;
+            font-weight: 600;
+            border: 4px solid #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            flex-shrink: 0;
+            aspect-ratio: 1/1;
+            user-select: none;
+            box-sizing: border-box;
+            overflow: hidden;
+            min-width: 70px;
+            max-width: 70px;
+            min-height: 70px;
+            max-height: 70px;
+            position: relative;
+            text-align: center;
+        }
+
+        .friend-request div, .suggestion div {
+            margin-left: 20px;
+            flex: 1;
+        }
+
+        .friend-request p, .suggestion p {
+            margin: 5px 0;
+        }
+
+        .friend-request strong, .suggestion strong {
+            font-size: 20px;
+            color: #2d3748;
+            letter-spacing: 0.3px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        button {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .confirm-btn, .add-friend-btn {
+            background: linear-gradient(135deg, #4776E6, #8E54E9);
+            color: white;
+        }
+
+        .confirm-btn:hover, .add-friend-btn:hover {
+            background: linear-gradient(135deg, #3a60b9, #7641c7);
+            transform: scale(1.05);
+        }
+
+        .decline-btn, .remove-btn {
+            background: #f8fafc;
+            color: #4a5568;
+        }
+
+        .decline-btn:hover, .remove-btn:hover {
+            background: #edf2f7;
+            transform: scale(1.05);
+        }
+
+        .mutual-friends {
+            font-size: 15px;
+            color: #718096;
+            display: flex;
+            align-items: center;
+        }
+
+        .mutual-friends:before {
+            content: '•';
+            margin-right: 8px;
+            color: #8f94fb;
+        }
+
+        @media (max-width: 640px) {
+            .actions {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .friend-request, .suggestion {
+                flex-direction: column;
+                text-align: center;
+                padding: 25px;
+            }
+            
+            .avatar-circle {
+                margin-bottom: 15px;
+                width: 90px;
+                height: 90px;
+                min-width: 90px;
+                max-width: 90px;
+                min-height: 90px;
+                max-height: 90px;
+                font-size: 40px;
+            }
+            
+            .friend-request div, .suggestion div {
+                margin-left: 0;
+                margin-bottom: 18px;
+            }
+        }
+
+        .empty-message {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            color: #718096;
+            font-style: italic;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        /* Custom popup styles */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .popup-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .popup-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        }
+        
+        .popup-overlay.active .popup-content {
+            transform: translateY(0);
+        }
+        
+        .popup-title {
+            color: #4776E6;
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+        
+        .popup-message {
+            margin-bottom: 20px;
+            color: #4a5568;
+        }
+        
+        .popup-close {
+            background: linear-gradient(135deg, #4776E6, #8E54E9);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .popup-close:hover {
+            transform: scale(1.05);
+            background: linear-gradient(135deg, #3a60b9, #7641c7);
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -13,10 +252,10 @@
         {% if requests %}
             {% for request in requests %}
                 <div class="friend-request" id="request-{{ request.id }}">
-                    <img src="{{ url_for('static', filename=request.profile_picture) }}" alt="{{ request.name }}'s Profile Picture">
+                    <div class="avatar-circle">{{ request.name[0]|upper }}</div>
                     <div>
                         <p><strong>{{ request.name }}</strong></p>
-                        <p>{{ request.mutual_friends }} mutual friends</p>
+                        <p class="mutual-friends">{{ request.mutual_friends }} mutual friends</p>
                     </div>
                     <div class="actions">
                         <button class="confirm-btn" data-id="{{ request.id }}">Confirm</button>
@@ -25,17 +264,19 @@
                 </div>
             {% endfor %}
         {% else %}
-            <p>No friend requests found.</p>
+            <div class="empty-message">
+                <p>No friend requests at the moment.</p>
+            </div>
         {% endif %}
 
         <h2 class="section-title">People You May Know</h2>
         {% if suggestions %}
             {% for suggestion in suggestions %}
                 <div class="suggestion" id="suggestion-{{ suggestion.id }}">
-                    <img src="{{ url_for('static', filename=suggestion.profile_picture) }}" alt="{{ suggestion.name }}'s Profile Picture">
+                    <div class="avatar-circle">{{ suggestion.name[0]|upper }}</div>
                     <div>
                         <p><strong>{{ suggestion.name }}</strong></p>
-                        <p>{{ suggestion.mutual_friends }} mutual friends</p>
+                        <p class="mutual-friends">{{ suggestion.mutual_friends }} mutual friends</p>
                     </div>
                     <div class="actions">
                         <button class="add-friend-btn" data-id="{{ suggestion.id }}">Add Friend</button>
@@ -44,21 +285,61 @@
                 </div>
             {% endfor %}
         {% else %}
-            <p>No suggestions found.</p>
+            <div class="empty-message">
+                <p>No suggestions available right now.</p>
+            </div>
         {% endif %}
     </div>
 
-    <script src="/static/script_10.js"></script>
+    <!-- Add this at the end of the body -->
+    <div class="popup-overlay" id="friendPopup">
+        <div class="popup-content">
+            <h3 class="popup-title">Friend Added!</h3>
+            <p class="popup-message" id="popupMessage">You are now friends with <span id="friendName"></span>!</p>
+            <button class="popup-close" onclick="closePopup()">Great!</button>
+        </div>
+    </div>
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
+        function showPopup(message) {
+            $('#popupMessage').html(message);
+            $('#friendPopup').addClass('active');
+            
+            // Close popup after 3 seconds automatically (optional)
+            setTimeout(function() {
+                closePopup();
+            }, 3000);
+        }
+        
+        function closePopup() {
+            $('#friendPopup').removeClass('active');
+        }
+    
         $(document).ready(function() {
             // Confirm Friend Request (Add Friend)
             $('.confirm-btn').on('click', function() {
                 var requestId = $(this).data('id');
+                var friendName = $(this).closest('.friend-request').find('strong').text();
+                var friendRequest = $('#request-' + requestId);
+                
+                // Show custom popup
+                showPopup('You are now friends with <strong>' + friendName + '</strong>!');
+                
+                // Wait for the popup to be visible before starting to fade out
+                setTimeout(function() {
+                    friendRequest.fadeOut(300, function() {
+                        $(this).remove();
+                        if ($('.friend-request').length === 0) {
+                            $('.section-title:first').after('<div class="empty-message"><p>No friend requests at the moment.</p></div>');
+                        }
+                    });
+                }, 1000); // Small delay to ensure popup is seen
+                
+                // Send the AJAX request in the background
                 $.post('/add_friend', { id: requestId }, function(response) {
-                    if (response.success) {
-                        $('#request-' + requestId).remove();
-                    } else {
-                        alert('Error adding friend');
+                    if (!response.success) {
+                        showPopup('Error adding friend');
                     }
                 });
             });
@@ -66,37 +347,74 @@
             // Decline Friend Request (Delete)
             $('.decline-btn').on('click', function() {
                 var requestId = $(this).data('id');
+                var friendRequest = $('#request-' + requestId);
+                
+                // Immediately start fading out the element
+                friendRequest.fadeOut(300, function() {
+                    $(this).remove();
+                    if ($('.friend-request').length === 0) {
+                        $('.section-title:first').after('<div class="empty-message"><p>No friend requests at the moment.</p></div>');
+                    }
+                });
+                
+                // Send the AJAX request in the background
                 $.post('/delete_request', { id: requestId }, function(response) {
-                    if (response.success) {
-                        $('#request-' + requestId).remove();
-                    } else {
+                    if (!response.success) {
                         alert('Error deleting request');
+                        // If there was an error, you might want to refresh the page
+                        // location.reload();
                     }
                 });
             });
 
             // Add Friend (From Suggestions)
             $('.add-friend-btn').on('click', function() {
-                var suggestionId = $(this).data('id');
+                var button = $(this);
+                var suggestionId = button.data('id');
+                var suggestionName = button.closest('.suggestion').find('strong').text();
+                var suggestion = $('#suggestion-' + suggestionId);
+                
+                // Change button color to white and text to "Request Sent"
+                button.css({
+                    'background': 'white',
+                    'color': '#4776E6'
+                }).text('Request Sent');
+                
+                // Disable the button to prevent multiple clicks
+                button.prop('disabled', true);
+                
+                // Show custom popup
+                showPopup('Friend request sent to <strong>' + suggestionName + '</strong>!');
+                
+                // Send the AJAX request in the background
                 $.post('/add_friend', { id: suggestionId }, function(response) {
-                    if (response.success) {
-                        $('#suggestion-' + suggestionId).remove();
-                    } else {
-                        alert('Error adding friend');
+                    if (!response.success) {
+                        showPopup('Error sending friend request');
+                        // Restore button if there was an error
+                        button.css({
+                            'background': 'linear-gradient(135deg, #4776E6, #8E54E9)',
+                            'color': 'white'
+                        }).text('Add Friend').prop('disabled', false);
                     }
                 });
             });
 
-            // Remove Suggestion
+            // Remove Suggestion - Fixed implementation
             $('.remove-btn').on('click', function() {
                 var suggestionId = $(this).data('id');
-                $.post('/remove_suggestion', { id: suggestionId }, function(response) {
-                    if (response.success) {
-                        $('#suggestion-' + suggestionId).remove();
-                    } else {
-                        alert('Error removing suggestion');
+                
+                // Immediately remove the suggestion from the page
+                $('#suggestion-' + suggestionId).fadeOut(300, function() {
+                    $(this).remove();
+                    
+                    // Check if there are any suggestions left
+                    if ($('.suggestion').length === 0) {
+                        $('.section-title:last').after('<div class="empty-message"><p>No suggestions available right now.</p></div>');
                     }
                 });
+                
+                // Optional: Send the AJAX request to update the server
+                $.post('/remove_suggestion', { id: suggestionId });
             });
         });
     </script>
